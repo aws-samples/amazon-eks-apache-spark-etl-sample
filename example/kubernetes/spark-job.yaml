@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nyctaxi-value-zones-spark
+spec:
+  template:
+    spec:
+      containers:
+        - name: spark
+          image: vgkowski/spark:2.4.3
+          command: [
+            "/bin/sh",
+            "-c",
+            "/opt/spark/bin/spark-submit \
+            --master k8s://https://10.100.0.1:443 \
+            --deploy-mode cluster \
+            --name nyctaxi-value-zones \
+            --class ValueZones \
+            --conf spark.executor.instances=10 \
+            --conf spark.executor.memory=8G \
+            --conf spark.executor.cores=2 \
+            --conf spark.kubernetes.container.image=<REPO_NAME>/<IMAGE_NAME>:v1 \
+            --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
+            --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
+            local:///opt/spark/jars/nyctaxi-value-zones-assembly-1.0.jar \
+            \"s3a://nyc-tlc/trip data/yellow_tripdata_2017*.csv,s3a://nyc-tlc/trip data/yellow_tripdata_2018*.csv\" \
+            \"s3a://nyc-tlc/trip data/green_tripdata_2017*.csv,s3a://nyc-tlc/trip data/green_tripdata_2018*.csv\" \
+            \"s3a://nyc-tlc/misc/taxi _zone_lookup.csv\" \
+            \"s3a://<YOUR_S3_BUCKET>\""
+          ]
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              value:
+                secretKeyRef:
+                   name: spark-on-EKS
+                   key: aws_access_key_id
+            - name: AWS_SECRET_ACCESS_KEY
+              value:
+                secretKeyRef:
+                  name: spark-on-EKS
+                  key: aws_secret_access_key
+      serviceAccountName: spark
+      restartPolicy: Never
+  backoffLimit: 4

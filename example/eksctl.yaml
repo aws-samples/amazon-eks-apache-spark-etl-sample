@@ -1,0 +1,22 @@
+apiVersion: eksctl.io/v1alpha3
+kind: ClusterConfig
+
+metadata:
+  name: spark-cluster
+  region: us-east-1
+  version: "1.13"
+
+nodeGroups:
+
+  - name: spark-nodes
+    instanceType: m5.xlarge
+    volumeSize: 30
+    desiredCapacity: 3
+    minSize: 1
+    maxSize: 3
+    privateNetworking: true
+    maxPodsPerNode: 10
+    policyARNs: []
+    #allowSSH: true
+    #sshPublicKeyPath: spark-eks
+    #asgAccess: true
