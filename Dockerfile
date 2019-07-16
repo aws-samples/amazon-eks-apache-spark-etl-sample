@@ -1,4 +1,4 @@
-FROM openjdk:8u181 AS build
+FROM openjdk:8 AS build
 
 # Env variables
 ENV SCALA_VERSION 2.11.12
@@ -44,7 +44,7 @@ RUN sbt reload
 COPY . ./
 RUN sbt clean assembly
 
-FROM openjdk:8u181 AS spark
+FROM openjdk:8 AS spark
 
 RUN \
     mkdir -p /spark/ && \
@@ -63,8 +63,8 @@ ARG spark_home=/spark/spark-2.4.3-bin-hadoop2.7
 
 RUN set -ex && \
     apk upgrade --no-cache && \
-    apk add --no-cache bash tini libc6-compat linux-pam nss && \
-    mkdir -p /opt/spark/bin && \
+    apk add --no-cache bash tini libc6-compat gcompat linux-pam nss && \
+    mkdir -p /opt/spark && \
     mkdir -p /opt/spark/work-dir && \
     touch /opt/spark/RELEASE && \
     rm /bin/sh && \
@@ -74,9 +74,10 @@ RUN set -ex && \
 
 COPY --from=spark ${spark_home}/jars /opt/spark/jars
 COPY --from=spark ${spark_home}/bin /opt/spark/bin
+COPY --from=spark ${spark_home}/sbin /opt/spark/sbin
 COPY --from=spark ${spark_home}/kubernetes/dockerfiles/spark/entrypoint.sh /opt/
 
-COPY --from=build /opt/input/target/scala-2.11/spark-on-eks-assembly-v1.jar  /opt/spark/jars
+COPY --from=build /opt/input/target/scala-2.11/spark-on-eks-assembly-v1.0.jar  /opt/spark/jars
 
 ENV SPARK_HOME /opt/spark
 

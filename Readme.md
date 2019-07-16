@@ -37,7 +37,7 @@ The job follows the data format provided by 2017 and 2018 NYC taxi rides
 1. Create the Spark IAM user and get its access key ID and secret key ID
 2. Create the Kubernetes Secret with AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 
-`kubectl create secret generic spark-on-EKS --from-literal=aws_access_key_id=' <YOUR_AWS_ACCESS_KEY_ID>' --from-literal=aws_secret_access_key='<YOUR_AWS_SECRET_ACCESS_KEY>'`
+`kubectl create secret generic spark-on-eks --from-literal=aws_access_key_id='<YOUR_AWS_ACCESS_KEY_ID>' --from-literal=aws_secret_access_key='<YOUR_AWS_SECRET_ACCESS_KEY>'`
 
 ## Run the application on EKS cluster
 

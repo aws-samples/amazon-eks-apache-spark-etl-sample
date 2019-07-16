@@ -1,6 +1,6 @@
 name := "spark-on-eks"
 
-version := "v1"
+version := "v1.0"
 
 scalaVersion := "2.11.12"
 
@@ -13,7 +13,6 @@ libraryDependencies ++= {
     "org.apache.spark" %% "spark-sql" % "2.4.3" % "provided",
     "org.apache.hadoop" % "hadoop-aws" % "2.7.1",
     "com.amazonaws" % "aws-java-sdk" % "1.7.4",
-    "com.holdenkarau" %% "spark-testing-base" % "2.4.3_0.12.0" % Test,
     "org.scalactic" %% "scalactic" % "3.0.7",
     "org.scalatest" %% "scalatest" % "3.0.7" % Test
   )

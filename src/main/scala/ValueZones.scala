@@ -44,6 +44,8 @@ object ValueZones {
 
         import sparkSession.implicits._
 
+        sparkSession.conf.set("spark.sql.session.timeZone", "America/New_York")
+
         val yellowEvents = sparkSession.read
           .option("header","true")
           .option("inferSchema", "true")
@@ -85,6 +87,7 @@ object ValueZones {
           .join(zonesInfo,$"PULocationID" === $"LocationID")
           .select("pickup_datetime","minute_rate","taxiColor","LocationID","Borough", "Zone")
 
+        allEventsWithZone.cache
 
         val zoneAttractiveness = allEventsWithZone
           .groupBy($"LocationID", date_trunc("hour",$"pickup_datetime") as "pickup_hour")
@@ -102,12 +105,15 @@ object ValueZones {
           .repartition($"year",$"month")
           .sortWithinPartitions("day")
           .write
+          .mode("OVERWRITE")
           .partitionBy("year","month")
           .parquet(target+"/raw-rides")
 
         val aggregateQuery = zoneAttractiveness
           .repartition(1)
           .sortWithinPartitions($"pickup_hour")
-          .write.parquet(target+"/value-rides")
+          .write
+          .mode("OVERWRITE")
+          .parquet(target+"/value-rides")
     }
 }
