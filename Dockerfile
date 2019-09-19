@@ -24,7 +24,13 @@ echo "scalaVersion := \"${SCALA_VERSION}\"" > build.sbt && \
 echo "sbt.version=${SBT_VERSION}" > project/build.properties && \
 echo "case object Temp" > Temp.scala && \
 sbt compile && \
-rm -r project && rm build.sbt && rm Temp.scala && rm -r target
+rm -r project && rm build.sbt && rm Temp.scala && rm -r target && \
+mkdir -p /spark/ && \
+curl -fsL http://apache.mirror.iphh.net/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz | tar xfz - -C /spark/ && \
+rm /spark/spark-2.4.4-bin-hadoop2.7/jars/kubernetes-*-4.1.2.jar && \
+wget https://repo1.maven.org/maven2/io/fabric8/kubernetes-model-common/4.4.2/kubernetes-model-common-4.4.2.jar -P /spark/spark-2.4.4-bin-hadoop2.7/jars/ && \
+wget https://repo1.maven.org/maven2/io/fabric8/kubernetes-client/4.4.2/kubernetes-client-4.4.2.jar -P /spark/spark-2.4.4-bin-hadoop2.7/jars/ && \
+wget https://repo1.maven.org/maven2/io/fabric8/kubernetes-model/4.4.2/kubernetes-model-4.4.2.jar -P /spark/spark-2.4.4-bin-hadoop2.7/jars/
 
 # Define working directory
 WORKDIR /opt/input
@@ -44,22 +50,9 @@ RUN sbt reload
 COPY . ./
 RUN sbt clean assembly
 
-FROM openjdk:8 AS spark
+FROM openjdk:8-alpine AS spark
 
-RUN \
-    mkdir -p /spark/ && \
-    curl -fsL http://mirrors.standaloneinstaller.com/apache/spark/spark-2.4.3/spark-2.4.3-bin-hadoop2.7.tgz | tar xfz - -C /spark/
-
-FROM openjdk:8-alpine AS final
-
-ARG spark_home=/spark/spark-2.4.3-bin-hadoop2.7
-
-# Before building the docker image, first build and make a Spark distribution following
-# the instructions in http://spark.apache.org/docs/latest/building-spark.html.
-# If this docker file is being used in the context of building your images from a Spark
-# distribution, the docker build command should be invoked from the top level directory
-# of the Spark distribution. E.g.:
-# docker build -t spark:latest -f kubernetes/dockerfiles/spark/Dockerfile .
+ARG spark_home=/spark/spark-2.4.4-bin-hadoop2.7
 
 RUN set -ex && \
     apk upgrade --no-cache && \
@@ -72,10 +65,12 @@ RUN set -ex && \
     echo "auth required pam_wheel.so use_uid" >> /etc/pam.d/su && \
     chgrp root /etc/passwd && chmod ug+rw /etc/passwd
 
-COPY --from=spark ${spark_home}/jars /opt/spark/jars
-COPY --from=spark ${spark_home}/bin /opt/spark/bin
-COPY --from=spark ${spark_home}/sbin /opt/spark/sbin
-COPY --from=spark ${spark_home}/kubernetes/dockerfiles/spark/entrypoint.sh /opt/
+COPY --from=build ${spark_home}/jars /opt/spark/jars
+COPY --from=build ${spark_home}/bin /opt/spark/bin
+COPY --from=build ${spark_home}/sbin /opt/spark/sbin
+COPY --from=build ${spark_home}/kubernetes/dockerfiles/spark/entrypoint.sh /opt/
+
+FROM spark AS final
 
 COPY --from=build /opt/input/target/scala-2.11/spark-on-eks-assembly-v1.0.jar  /opt/spark/jars
 

@@ -4,10 +4,9 @@ kind: ClusterConfig
 metadata:
   name: spark-cluster
   region: us-east-1
-  version: "1.13"
+  version: "1.14"
 
 nodeGroups:
-
   - name: spark-nodes
     instanceType: m5.xlarge
     volumeSize: 30
@@ -16,3 +15,8 @@ nodeGroups:
     maxSize: 4
     privateNetworking: true
     maxPodsPerNode: 10
+    iam:
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - <YOUR_AWS_IAM_POLICY_ARN>

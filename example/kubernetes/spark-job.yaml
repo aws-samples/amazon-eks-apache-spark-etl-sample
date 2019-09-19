@@ -7,7 +7,7 @@ spec:
     spec:
       containers:
         - name: spark
-          image: vgkowski/spark:2.4.0
+          image: <REPO_NAME>/spark:v2.4.4
           command: [
             "/bin/sh",
             "-c",
@@ -20,18 +20,14 @@ spec:
             --conf spark.executor.memory=10G \
             --conf spark.executor.cores=2 \
             --conf spark.sql.shuffle.partitions=60 \
-            --conf spark.kubernetes.container.image=<REPO_NAME>/<IMAGE_NAME>:v1.0 \
+            --conf spark.kubernetes.container.image=<REPO_NAME>/<IMAGE_NAME>:<TAG> \
             --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
             --conf spark.kubernetes.container.image.pullPolicy=Always \
             --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
-            --conf spark.kubernetes.driver.secretKeyRef.AWS_ACCESS_KEY_ID=spark-on-eks:aws_access_key_id \
-            --conf spark.kubernetes.driver.secretKeyRef.AWS_SECRET_ACCESS_KEY=spark-on-eks:aws_secret_access_key \
-            --conf spark.kubernetes.executor.secretKeyRef.AWS_ACCESS_KEY_ID=spark-on-eks:aws_access_key_id \
-            --conf spark.kubernetes.executor.secretKeyRef.AWS_SECRET_ACCESS_KEY=spark-on-eks:aws_secret_access_key \
             local:///opt/spark/jars/spark-on-eks-assembly-v1.0.jar \
             \"s3a://nyc-tlc/trip data/yellow_tripdata_2018*.csv\" \
             \"s3a://nyc-tlc/trip data/green_tripdata_2018*.csv\" \
-            \"s3a://nyc-tlc/misc/taxi _zone_lookup.csv\" \k
+            \"s3a://nyc-tlc/misc/taxi _zone_lookup.csv\" \
             \"s3a://<YOUR_S3_BUCKET>\""
           ]
       serviceAccountName: spark
