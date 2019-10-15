@@ -6,13 +6,13 @@ metadata:
   region: us-east-1
   version: "1.14"
 
+availabilityZones: ["us-east-1a", "us-east-1b","us-east-1c"]
+
 nodeGroups:
   - name: spark-nodes
     instanceType: m5.xlarge
     volumeSize: 30
     desiredCapacity: 4
-    minSize: 1
-    maxSize: 4
     privateNetworking: true
     maxPodsPerNode: 10
     iam:
