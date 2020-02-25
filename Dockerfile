@@ -26,7 +26,7 @@ echo "case object Temp" > Temp.scala && \
 sbt compile && \
 rm -r project && rm build.sbt && rm Temp.scala && rm -r target && \
 mkdir -p /spark/ && \
-curl -fsL http://apache.mirror.iphh.net/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz | tar xfz - -C /spark/ && \
+curl -fsL https://archive.apache.org/dist/spark/spark-2.4.4/spark-2.4.4-bin-hadoop2.7.tgz | tar xfz - -C /spark/ && \
 rm /spark/spark-2.4.4-bin-hadoop2.7/jars/kubernetes-*-4.1.2.jar && \
 wget https://repo1.maven.org/maven2/io/fabric8/kubernetes-model-common/4.4.2/kubernetes-model-common-4.4.2.jar -P /spark/spark-2.4.4-bin-hadoop2.7/jars/ && \
 wget https://repo1.maven.org/maven2/io/fabric8/kubernetes-client/4.4.2/kubernetes-client-4.4.2.jar -P /spark/spark-2.4.4-bin-hadoop2.7/jars/ && \
