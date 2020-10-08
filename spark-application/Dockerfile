@@ -1,8 +1,8 @@
 FROM openjdk:11-jdk-slim AS sbt
 
 # Env variables
-ENV SCALA_VERSION 2.12.8
-ENV SBT_VERSION 1.3.4
+ENV SCALA_VERSION 2.12.11
+ENV SBT_VERSION 1.3.10
 
 # Install Scala
 ## Piping curl directly in tar
@@ -27,7 +27,7 @@ RUN \
 
 FROM openjdk:11-jre-slim AS spark
 
-ENV SPARK_VERSION 3.0.0-preview2
+ENV SPARK_VERSION 3.0.0
 ENV HADOOP_VERSION 3.2
 
 ARG spark_home=/spark/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION
@@ -91,7 +91,7 @@ RUN sbt clean assembly
 
 FROM spark AS final
 
-COPY --from=build /opt/input/target/scala-2.12/spark-on-eks-assembly-v1.1.jar  /opt/spark/jars
+COPY --from=build /opt/input/target/scala-2.12/spark-on-eks-assembly-v2.jar  /opt/spark/jars
 
 ENV SPARK_HOME /opt/spark
 

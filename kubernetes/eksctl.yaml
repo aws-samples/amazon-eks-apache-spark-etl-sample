@@ -1,0 +1,248 @@
+# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: spark-cluster
+  region: us-east-1
+  version: "1.18"
+
+availabilityZones: ["us-east-1a", "us-east-1b","us-east-1c"]
+
+vpc:
+# If you wish to use an existing VPC, please provide the subnet ID, change the availability zones above accordingly
+#  subnets:
+#    private:
+#      us-east-1a: { id: <YOUR_SUBNET_ID> }
+#      us-east-1b: { id: <YOUR_SUBNET_ID> }
+#      us-east-1c: { id: <YOUR_SUBNET_ID> }
+  nat:
+    gateway: HighlyAvailable # other options: Disable, Single (default)
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+
+cloudWatch:
+  clusterLogging:
+    # enable specific types of cluster control plane logs
+    enableTypes: ["all"]
+    # all supported types: "api", "audit", "authenticator", "controllerManager", "scheduler"
+    # supported special values: "*" and "all"
+
+iam:
+  withOIDC: true
+  serviceAccounts:
+    - metadata:
+        name: cluster-autoscaler
+        namespace: kube-system
+        labels: {aws-usage: "cluster-ops"}
+      attachPolicy: # inline policy can be defined along with `attachPolicyARNs`
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+            - "autoscaling:DescribeAutoScalingGroups"
+            - "autoscaling:DescribeAutoScalingInstances"
+            - "autoscaling:DescribeLaunchConfigurations"
+            - "autoscaling:DescribeTags"
+            - "autoscaling:SetDesiredCapacity"
+            - "autoscaling:TerminateInstanceInAutoScalingGroup"
+            - "ec2:DescribeLaunchTemplateVersions"
+            Resource: '*'
+
+fargateProfiles:
+  - name: fp-serverless
+    selectors:
+      # All workloads in the "spark" Kubernetes namespace matching the following
+      # label selectors will be scheduled onto Fargate:
+      - namespace: kube-system
+        labels:
+          nodegroup-type: serverless
+      - namespace: spark-operator
+        labels:
+          nodegroup-type: serverless
+      - namespace: spark
+        labels:
+          nodegroup-type: serverless
+    tags:
+      role: spark-eks-workshop
+      nodegroup-type: fargate
+
+managedNodeGroups:
+  - name: tooling
+    instanceType: t3.2xlarge
+    minSize: 2
+    maxSize: 4
+    desiredCapacity: 2
+    volumeSize: 20
+    labels:
+      lifecycle: on-demand
+      nodegroup: tooling
+    tags:
+      role: spark-eks-workshop
+      nodegroup: tooling
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+nodeGroups:
+  - name: spark-nodes-io1-1a
+    availabilityZones: ["us-east-1a"]
+    minSize: 0
+    maxSize: 4
+    volumeSize: 200
+    volumeType: io1
+    volumeIOPS: 10000
+    privateNetworking: true
+    instancesDistribution:
+      instanceTypes: ["r5.xlarge", "r5a.xlarge", "r4.xlarge","r5d.xlarge"]
+      onDemandBaseCapacity: 0
+      onDemandPercentageAboveBaseCapacity: 0
+      spotAllocationStrategy: capacity-optimized
+    labels:
+      lifecycle: spot
+      nodegroup: spark-nodes-io1
+      noderole: spark
+    tags:
+      role: spark-eks-workshop
+      nodegroup: spark-nodes-io1
+      noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/nodegroup: spark-nodes-io1
+      k8s.io/cluster-autoscaler/node-template/label/noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/lifecycle: spot
+      k8s.io/cluster-autoscaler/node-template/taint/spot: "true:NoSchedule"
+      k8s.io/cluster-autoscaler/spark-cluster: owned
+      k8s.io/cluster-autoscaler/enabled: "true"
+    taints:
+      spot: "true:NoSchedule"
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  - name: spark-nodes-gp2-1b
+    availabilityZones: ["us-east-1b"]
+    minSize: 0
+    maxSize: 4
+    volumeSize: 200
+    volumeType: gp2
+    privateNetworking: true
+    instancesDistribution:
+      instanceTypes: ["r5.xlarge", "r5a.xlarge", "r4.xlarge","r5d.xlarge"]
+      onDemandBaseCapacity: 0
+      onDemandPercentageAboveBaseCapacity: 0
+      spotAllocationStrategy: capacity-optimized
+    labels:
+      lifecycle: spot
+      nodegroup: spark-nodes-gp2
+      noderole: spark
+    tags:
+      role: spark-eks-workshop
+      nodegroup: spark-nodes-gp2
+      noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/nodegroup: spark-nodes-gp2
+      k8s.io/cluster-autoscaler/node-template/label/noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/lifecycle: spot
+      k8s.io/cluster-autoscaler/node-template/taint/spot: "true:NoSchedule"
+      k8s.io/cluster-autoscaler/spark-cluster: owned
+      k8s.io/cluster-autoscaler/enabled: "true"
+    taints:
+      spot: "true:NoSchedule"
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  - name: spark-nodes-nvme-1c
+    availabilityZones: ["us-east-1c"]
+    instanceType: r5d.xlarge
+    minSize: 0
+    maxSize: 4
+    privateNetworking: true
+    labels:
+      lifecycle: on-demand
+      nodegroup-type: spark-nodes-nvme
+      noderole: spark
+    tags:
+      role: spark-eks-workshop
+      nodegroup-type: spark-nodes-nvme
+      noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/nodegroup: spark-nodes-nvme
+      k8s.io/cluster-autoscaler/node-template/label/noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/lifecylce: on-demand
+      k8s.io/cluster-autoscaler/spark-cluster: owned
+      k8s.io/cluster-autoscaler/enabled: "true"
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+    preBootstrapCommands:
+      - "IDX=1"
+      - "for DEV in /dev/disk/by-id/nvme-Amazon_EC2_NVMe_Instance_Storage_*-ns-1; do  mkfs.xfs ${DEV};mkdir -p /local${IDX};echo ${DEV} /local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done"
+      - "mount -a"
+
+  - name: spark-nodes-2x-nvme-1a
+    availabilityZones: ["us-east-1a"]
+    instanceType: r5d.2xlarge
+    minSize: 0
+    maxSize: 4
+    privateNetworking: true
+    labels:
+      lifecycle: on-demand
+      nodegroup-type: spark-nodes-nvme
+      noderole: spark
+    tags:
+      role: spark-eks-workshop
+      nodegroup-type: spark-nodes-2x-nvme
+      k8s.io/cluster-autoscaler/node-template/label/nodegroup: spark-nodes-2x-nvme
+      k8s.io/cluster-autoscaler/node-template/label/noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/lifecycle: on-demand
+      k8s.io/cluster-autoscaler/spark-cluster: owned
+      k8s.io/cluster-autoscaler/enabled: "true"
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+    preBootstrapCommands:
+      - "IDX=1"
+      - "for DEV in /dev/disk/by-id/nvme-Amazon_EC2_NVMe_Instance_Storage_*-ns-1; do  mkfs.xfs ${DEV};mkdir -p /local${IDX};echo ${DEV} /local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done"
+      - "mount -a"
