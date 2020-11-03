@@ -1,8 +1,10 @@
-name := "spark-eks-example-application"
+name := "spark-eks"
 
 version := "2.0"
 
 scalaVersion := "2.12.11"
+
+mainClass in assembly := Some("ValueZones.Main")
 
 // additional librairies
 libraryDependencies ++= {
@@ -35,6 +37,5 @@ assemblyMergeStrategy in assembly := {
 
 // testing configuration
 fork in Test := true
-test in assembly := {}
 javaOptions ++= Seq("-Xms512M", "-Xmx2048M", "-XX:MaxPermSize=2048M", "-XX:+CMSClassUnloadingEnabled")
 parallelExecution in Test := false

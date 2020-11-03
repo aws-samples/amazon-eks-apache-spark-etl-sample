@@ -1,4 +1,4 @@
-import org.scalatest.{FunSuite,BeforeAndAfterAll}
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 
 class ValueZonesSpec extends FunSuite with BeforeAndAfterAll with SparkTestSession {
@@ -6,10 +6,10 @@ class ValueZonesSpec extends FunSuite with BeforeAndAfterAll with SparkTestSessi
 
   test("raw rides results test") {
 
-    ValueZones.runJob(spark,
+    ValueZones.runJob(
       List("src/test/resources/yellow_tripdata_sample.csv"),
       List("src/test/resources/green_tripdata_sample.csv"),
-      List("src/test/resources/taxi_zone_lookup.csv"),
+      "src/test/resources/taxi_zone_lookup.csv",
       "src/test/resources/results/"
     )
 

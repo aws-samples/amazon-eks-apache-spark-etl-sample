@@ -27,7 +27,7 @@ RUN \
 
 FROM openjdk:11-jre-slim AS spark
 
-ENV SPARK_VERSION 3.0.0
+ENV SPARK_VERSION 3.0.1
 ENV HADOOP_VERSION 3.2
 
 ARG spark_home=/spark/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION
@@ -91,7 +91,7 @@ RUN sbt clean assembly
 
 FROM spark AS final
 
-COPY --from=build /opt/input/target/scala-2.12/spark-on-eks-assembly-v2.jar  /opt/spark/jars
+COPY --from=build /opt/input/target/scala-2.12/spark-eks-assembly-2.0.jar  /opt/spark/jars
 
 ENV SPARK_HOME /opt/spark
 
