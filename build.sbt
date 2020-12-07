@@ -4,8 +4,6 @@ version := "v1.0"
 
 scalaVersion := "2.11.12"
 
-resolvers += "Typesafe Repository" at "http://repo.typesafe.com/typesafe/releases/"
-
 // additional librairies
 libraryDependencies ++= {
   Seq(
