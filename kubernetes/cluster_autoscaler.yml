@@ -139,7 +139,7 @@ spec:
         prometheus.io/port: '8085'
     spec:
       nodeSelector:
-        nodegroup: tooling
+        noderole: tooling
       serviceAccountName: cluster-autoscaler
       containers:
         - image: us.gcr.io/k8s-artifacts-prod/autoscaling/cluster-autoscaler:v1.17.3

@@ -1,0 +1,32 @@
+{
+  "name": "notebooks",
+  "type": "LIVY",
+  "virtualClusterId": "hmxje4otcjte18tj3i083phma",
+  "executionRoleArn": "arn:aws:iam::668876353122:role/gromav",
+  "releaseLabel": "emr-6.1.0-beta",
+  "configurationOverrides": {
+    "applicationConfiguration": [
+      {
+        "classification": "spark-defaults",
+        "properties": {
+          "spark.executor.instances": "5",
+          "spark.executorEnv.AWS_REGION": "us-east-1",
+          "spark.kubernetes.driverEnv.AWS_REGION": "us-east-1",
+          "spark.executor.memory": "20G",
+          "spark.driver.memory": "4G",
+          "spark.executor.cores": "3"
+        }
+      }
+    ],
+    "monitoringConfiguration": {
+      "persistentAppUI": "ENABLED",
+      "cloudWatchMonitoringConfiguration": {
+        "logGroupName": "/emr-containers/jobs",
+        "logStreamNamePrefix": "demo"
+      },
+      "s3MonitoringConfiguration": {
+        "logUri": "s3://gromav-test/emr-eks"
+      }
+    }
+  }
+}

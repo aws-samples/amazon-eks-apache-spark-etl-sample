@@ -1,0 +1,43 @@
+{
+  "name": "nyTaxiAnalytics",
+  "virtualClusterId": "hmxje4otcjte18tj3i083phma",
+  "executionRoleArn": "arn:aws:iam::668876353122:role/gromav",
+  "releaseLabel": "emr-6.1.0-beta",
+  "jobDriver": {
+    "sparkSubmitJobDriver": {
+      "entryPoint": "s3://gromav-test/spark-eks-assembly-2.0.jar",
+      "entryPointArguments": ["s3://nyc-tlc/trip\\ data/yellow_tripdata_2017-*.csv,s3://nyc-tlc/trip\\ data/yellow_tripdata_2018-*.csv,s3://nyc-tlc/trip\\ data/yellow_tripdata_2019-*.csv,s3://nyc-tlc/trip\\ data/yellow_tripdata_2020-*.csv", "s3://nyc-tlc/trip\\ data/green_tripdata_2017-*.csv,s3://nyc-tlc/trip\\ data/green_tripdata_2018-*.csv,s3://nyc-tlc/trip\\ data/green_tripdata_2019-*.csv,s3://nyc-tlc/trip\\ data/green_tripdata_2020-*.csv","s3://nyc-tlc/misc/taxi\\ _zone_lookup.csv","s3://gromav-test/results"],
+      "sparkSubmitParameters": "--class ValueZones"
+    }
+  },
+  "configurationOverrides": {
+    "applicationConfiguration": [
+      {
+        "classification": "spark-defaults",
+        "properties": {
+          "spark.dynamicAllocation.executorAllocationRatio": "1",
+          "spark.dynamicAllocation.shuffleTracking.enabled": "true",
+          "spark.dynamicAllocation.shuffleTracking.timeout": "120s",
+          "spark.dynamicAllocation.enabled":"true",
+          "spark.executorEnv.AWS_REGION": "us-east-1",
+          "spark.kubernetes.driverEnv.AWS_REGION": "us-east-1",
+          "spark.executor.memory": "20G",
+          "spark.driver.memory": "4G",
+          "spark.executor.cores": "3",
+          "spark.driver.node.selector": "lifecycle:od",
+          "spark.executor.node.selector": "lifecycle:spot"
+        }
+      }
+    ],
+    "monitoringConfiguration": {
+      "persistentAppUI": "ENABLED",
+      "cloudWatchMonitoringConfiguration": {
+        "logGroupName": "/emr-containers/jobs",
+        "logStreamNamePrefix": "demo"
+      },
+      "s3MonitoringConfiguration": {
+        "logUri": "s3://gromav-test/emr-eks"
+      }
+    }
+  }
+}
