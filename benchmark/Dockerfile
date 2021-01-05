@@ -23,40 +23,6 @@ RUN \
     apt-get install sbt && \
     sbt sbtVersion
 
-
-
-FROM openjdk:11-jre-slim AS spark
-
-ENV SPARK_VERSION 3.0.1
-ENV HADOOP_VERSION 3.2
-
-ARG spark_home=/spark/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION
-#ARG spark_home=/spark/spark-$SPARK_VERSION-bin-without-hadoop
-
-RUN set -ex && \
-    apt-get update && \
-    ln -s /lib /lib64 && \
-    apt install -y curl bash tini libc6 libpam-modules krb5-user libnss3 && \
-    rm -rf /var/cache/apt/* && \
-    mkdir -p /opt/spark && \
-    mkdir -p /opt/spark/examples && \
-    mkdir -p /opt/spark/work-dir && \
-    touch /opt/spark/RELEASE && \
-    rm /bin/sh && \
-    ln -sv /bin/bash /bin/sh && \
-    echo "auth required pam_wheel.so use_uid" >> /etc/pam.d/su && \
-    chgrp root /etc/passwd && chmod ug+rw /etc/passwd && \
-    rm -rf /var/cache/apt/* && \
-    mkdir -p /spark/ && \
-    curl -fsL https://archive.apache.org/dist/spark/spark-$SPARK_VERSION/spark-$SPARK_VERSION-bin-hadoop$HADOOP_VERSION.tgz | tar xfz - -C /spark/ && \
-    cp -R ${spark_home}/jars /opt/spark/jars && \
-    cp -R ${spark_home}/bin /opt/spark/bin && \
-    cp -R ${spark_home}/sbin /opt/spark/sbin && \
-    cp -R ${spark_home}/kubernetes/dockerfiles/spark/entrypoint.sh /opt/ && \
-    rm -Rf ${spark_home}
-
-
-
 FROM sbt AS build
 
 RUN \
@@ -85,10 +51,18 @@ RUN sbt reload
 COPY . ./
 RUN sbt clean assembly
 
+FROM openjdk:11-jre-slim as tpc-build
 
-FROM spark AS final
+RUN apt-get update && \
+    apt install -y gcc make flex bison byacc git && \
+    git clone https://github.com/databricks/tpcds-kit.git -b master /tmp/tpcds-kit && \
+    cd /tmp/tpcds-kit/tools && \
+    make OS=LINUX
 
-COPY --from=build /opt/input/target/scala-2.12/eks-spark-benchmark-assembly-1.0.jar  /opt/spark/jars
+FROM vgkowski/spark-cloud:v3.0.1 AS final
+
+COPY --from=build /opt/input/target/scala-2.12/eks-spark-benchmark-assembly-3.0.1.jar  /opt/spark/jars
+COPY --from=tpc-build /tmp/tpcds-kit/tools /opt/tpcds-kit/tools
 
 ENV SPARK_HOME /opt/spark
 

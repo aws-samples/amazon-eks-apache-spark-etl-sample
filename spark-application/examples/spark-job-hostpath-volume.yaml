@@ -58,6 +58,16 @@ data:
                 values:
                 - spark-eks
             topologyKey: failure-domain.beta.kubernetes.io/zone
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: spark-app
+                operator: NotIn
+                values:
+                - spark-eks
+            topologyKey: kubernetes.io/hostname
 
 ---
 apiVersion: batch/v1
@@ -86,11 +96,12 @@ spec:
             --conf spark.executor.memory=20G \
             --conf spark.executor.cores=3 \
             --conf spark.sql.shuffle.partitions=100 \
-            --conf spark.kubernetes.container.image=vgkowski/spark-eks:v2 \
+            --conf spark.kubernetes.container.image=vgkowski/spark-eks:v3.0.1 \
             --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
             --conf spark.kubernetes.container.image.pullPolicy=Always \
             --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
             --conf spark.kubernetes.driver.label.spark-app=spark-eks \
+            --conf spark.kubernetes.executor.label.spark-app=spark-eks \
             --conf spark.kubernetes.node.selector.noderole=spark \
             --conf spark.kubernetes.node.selector.os=linux \
             --conf spark.kubernetes.node.selector.arch=intel \
@@ -102,13 +113,17 @@ spec:
             --conf spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.path='/pv/tmp' \
             --conf spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.path=/pv-disks/local1 \
             --conf spark.local.dir='/pv/tmp' \
+            --conf spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory \
+            --conf spark.sql.sources.commitProtocolClass=org.apache.spark.internal.io.cloud.PathOutputCommitProtocol \
+            --conf spark.sql.parquet.output.committer.class=org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter \
             --conf spark.hadoop.fs.s3a.committer.name=magic \
             --conf spark.hadoop.fs.s3a.committer.magic.enabled=true \
-            local:///opt/spark/jars/spark-eks-assembly-2.0.jar \
+            --conf spark.hadoop.fs.s3a.fast.upload=true \
+            local:///opt/spark/jars/spark-eks-assembly-3.0.1.jar \
             \"s3a://nyc-tlc/trip data/yellow_tripdata_2017-*.csv,s3a://nyc-tlc/trip data/yellow_tripdata_2018-*.csv,s3a://nyc-tlc/trip data/yellow_tripdata_2019-*.csv,s3a://nyc-tlc/trip data/yellow_tripdata_2020-*.csv\" \
             \"s3a://nyc-tlc/trip data/green_tripdata_2017-*.csv,s3a://nyc-tlc/trip data/green_tripdata_2018-*.csv,s3a://nyc-tlc/trip data/green_tripdata_2019-*.csv,s3a://nyc-tlc/trip data/green_tripdata_2020-*.csv\" \
             \"s3a://nyc-tlc/misc/taxi _zone_lookup.csv\" \
-            \"s3a://gromav-test/results\""
+            \"s3a://gromav-test/nyctaxi\""
           ]
           volumeMounts:
             - name: spark-pod-template

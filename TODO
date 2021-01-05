@@ -1,3 +1,6 @@
  * Add dependecy between K8S job and K8S driver pod so when we delete the job it deletes the driver pod. Executors pods are already dependent on the driver so cascade delete will happen
  * Change the autoscaler step to scale faster
  * Change the fargate profile adding a label to allow job and driver being scheduled quickly
+ * Check why spark-submit fails with non root user in the spark image (.ivy error then user error...)
+ * Use Amazon EKS native labels instead of custom ones
+ * Use EBS volumes for driver and executors via CSI

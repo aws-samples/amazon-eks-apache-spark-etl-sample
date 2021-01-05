@@ -97,9 +97,16 @@ spec:
             --conf spark.kubernetes.driver.annotation.cluster-autoscaler.kubernetes.io/safe-to-evict=false \
             --conf spark.kubernetes.driver.podTemplateFile='/opt/spark/conf/driver_pod_template.yml' \
             --conf spark.kubernetes.executor.podTemplateFile='/opt/spark/conf/executor_pod_template.yml' \
+            --conf spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory \
+            --conf spark.sql.sources.commitProtocolClass=org.apache.spark.internal.io.cloud.PathOutputCommitProtocol \
+            --conf spark.sql.parquet.output.committer.class=org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter \
             --conf spark.hadoop.fs.s3a.committer.name=magic \
             --conf spark.hadoop.fs.s3a.committer.magic.enabled=true \
-            local:///opt/spark/jars/spark-eks-assembly-2.0.jar \
+            --conf spark.hadoop.fs.s3a.fast.upload=true \
+            --conf spark.hadoop.fs.s3a.metadatastore.impl=org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore \
+            --conf spark.hadoop.fs.s3a.s3guard.ddb.region=us-east-1 \
+            --conf spark.hadoop.fs.s3a.s3guard.ddb.table.create=true \
+            local:///opt/spark/jars/spark-eks-assembly-3.0.1.jar \
             \"s3a://nyc-tlc/trip data/yellow_tripdata_2017-*.csv,s3a://nyc-tlc/trip data/yellow_tripdata_2018-*.csv,s3a://nyc-tlc/trip data/yellow_tripdata_2019-*.csv,s3a://nyc-tlc/trip data/yellow_tripdata_2020-*.csv\" \
             \"s3a://nyc-tlc/trip data/green_tripdata_2017-*.csv,s3a://nyc-tlc/trip data/green_tripdata_2018-*.csv,s3a://nyc-tlc/trip data/green_tripdata_2019-*.csv,s3a://nyc-tlc/trip data/green_tripdata_2020-*.csv\" \
             \"s3a://nyc-tlc/misc/taxi _zone_lookup.csv\" \

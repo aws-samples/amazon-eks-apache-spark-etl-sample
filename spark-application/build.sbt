@@ -2,7 +2,7 @@ name := "spark-eks"
 
 version := "3.0.1"
 
-scalaVersion := "2.12.11"
+scalaVersion := "2.12.12"
 
 mainClass in assembly := Some("ValueZones.Main")
 
@@ -37,5 +37,5 @@ assemblyMergeStrategy in assembly := {
 
 // testing configuration
 fork in Test := true
-javaOptions ++= Seq("-Xms512M", "-Xmx2048M", "-XX:MaxPermSize=2048M", "-XX:+CMSClassUnloadingEnabled")
+javaOptions ++= Seq("-Xms512M", "-Xmx2048M")
 parallelExecution in Test := false

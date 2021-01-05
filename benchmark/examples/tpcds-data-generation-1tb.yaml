@@ -22,24 +22,33 @@ subjects:
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: tpcds-data-generation-template
+  name: tpcds-data-generation-1tb-template
 data:
   driver: |-
     apiVersion: v1
     kind: Pod
-
     spec:
-      serviceAccountName: spark
       nodeSelector:
         lifecycle: od
-        disk: none
+      initContainers:
+      - name: volume-permissions
+        image: public.ecr.aws/y4g4v0z7/busybox
+        command: ['sh', '-c', 'chown -R 185 /pv/tmp']
+        volumeMounts:
+        - mountPath: /pv/tmp
+          name: spark-local-dir-1
 
   executor: |-
     apiVersion: v1
     kind: Pod
-
     spec:
-      serviceAccountName: spark
+      initContainers:
+      - name: volume-permissions
+        image: public.ecr.aws/y4g4v0z7/busybox
+        command: ['sh', '-c', 'chown -R 185 /pv/tmp']
+        volumeMounts:
+        - mountPath: /pv/tmp
+          name: spark-local-dir-1
       tolerations:
       - key: "spot"
         operator: "Equal"
@@ -47,7 +56,6 @@ data:
         effect: "NoSchedule"
       nodeSelector:
         lifecycle: spot
-        disk: nvme
       affinity:
         podAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -56,44 +64,45 @@ data:
               - key: spark-app
                 operator: In
                 values:
-                - spark-eks
+                - tpcds-data-generation-1tb
             topologyKey: failure-domain.beta.kubernetes.io/zone
 
 ---
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: tpcds-data-generation
+  name: tpcds-data-generation-1tb
 spec:
   template:
     spec:
       containers:
         - name: spark
-          image: vgkowski/spark:v3.0.1
+          # Standard image (without Spark Hadoop Cloud libs) can be used because we just need the spark-submit CLI
+          image: public.ecr.aws/y4g4v0z7/spark
           command: [
             "/bin/sh",
             "-c",
             "/opt/spark/bin/spark-submit \
             --master k8s://https://kubernetes.default.svc.cluster.local:443 \
             --deploy-mode cluster \
-            --name tpcds-data-generation \
+            --name tpcds-data-generation-1tb \
             --class com.amazonaws.eks.tpcds.DataGeneration \
             --conf spark.dynamicAllocation.enabled=true \
             --conf spark.dynamicAllocation.shuffleTracking.enabled=true \
-            --conf spark.kubernetes.allocation.batch.size=20 \
-            --conf spark.driver.memory=16G \
-            --conf spark.executor.instances=20 \
-            --conf spark.executor.memory=28G \
+            --conf spark.kubernetes.allocation.batch.size=40 \
+            --conf spark.driver.cores=3 \
+            --conf spark.driver.memory=24G \
+            --conf spark.executor.memory=27G \
             --conf spark.executor.cores=3 \
-            --conf spark.sql.shuffle.partitions=200 \
-            --conf spark.kubernetes.container.image=vgkowski/eks-spark-benchmark:v3.0.1 \
-            --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
+            --conf spark.sql.shuffle.partitions=400 \
+            --conf spark.kubernetes.container.image=public.ecr.aws/y4g4v0z7/eks-spark-benchmark:v3.0.1 \
             --conf spark.kubernetes.container.image.pullPolicy=Always \
             --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
-            --conf spark.kubernetes.driver.label.spark-app=tpcds-data-generation \
+            --conf spark.kubernetes.driver.label.spark-app=tpcds-data-generation-1tb \
             --conf spark.kubernetes.node.selector.noderole=spark \
             --conf spark.kubernetes.node.selector.os=linux \
             --conf spark.kubernetes.node.selector.arch=intel \
+            --conf spark.kubernetes.node.selector.disk=nvme \
             --conf spark.kubernetes.driver.annotation.cluster-autoscaler.kubernetes.io/safe-to-evict=false \
             --conf spark.kubernetes.driver.podTemplateFile='/opt/spark/conf/driver_pod_template.yml' \
             --conf spark.kubernetes.executor.podTemplateFile='/opt/spark/conf/executor_pod_template.yml' \
@@ -102,16 +111,20 @@ spec:
             --conf spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.path='/pv/tmp' \
             --conf spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.path=/pv-disks/local1 \
             --conf spark.local.dir='/pv/tmp' \
+            --conf spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory \
+            --conf spark.sql.sources.commitProtocolClass=org.apache.spark.internal.io.cloud.PathOutputCommitProtocol \
+            --conf spark.sql.parquet.output.committer.class=org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter \
             --conf spark.hadoop.fs.s3a.committer.name=magic \
             --conf spark.hadoop.fs.s3a.committer.magic.enabled=true \
-            local:///opt/spark/jars/eks-spark-benchmark-assembly-1.0.jar \
-            \"s3a://gromav-test/TPCDS-TEST-10TB\" \
+            --conf spark.hadoop.fs.s3a.fast.upload=true \
+            local:///opt/spark/jars/eks-spark-benchmark-assembly-3.0.1.jar \
+            \"s3a://gromav-test/tpcds-1tb\" \
             \"/opt/tpcds-kit/tools\" \
             \"parquet\" \
             \"1024\" \
-            \"200\" \
+            \"400\" \
             \"true\" \
-            \"false\" \
+            \"true\" \
             \"true\""
           ]
           volumeMounts:
@@ -126,6 +139,6 @@ spec:
       volumes:
         - name: spark-pod-template
           configMap:
-            name: spark-eks-pod-template
+            name: tpcds-data-generation-1tb-template
             defaultMode: 420
   backoffLimit: 4

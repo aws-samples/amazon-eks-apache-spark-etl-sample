@@ -2,7 +2,7 @@ name := "eks-spark-benchmark"
 
 version := "3.0.1"
 
-scalaVersion := "2.12.11"
+scalaVersion := "2.12.12"
 
 javacOptions ++= Seq("-source", "1.11", "-target", "1.11")
 
@@ -18,9 +18,19 @@ libraryDependencies ++= Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0"
 )
 
+
+assemblyShadeRules in assembly := Seq(
+  ShadeRule.rename("javax.xml.stream.**" -> "shaded-javax.xml.stream.@1").inLibrary("javax.xml.stream" % "stax-api" % "1.0-2"),
+  ShadeRule.rename("com.amazonaws.**" -> "shaded-com.amazonaws.@1").inLibrary("com.amazonaws" % "aws-java-sdk-bundle" % "1.11.375"),
+  ShadeRule.rename("*" -> "shaded-@1").inLibrary("com.fasterxml.jackson.core" % "jackson-core" % "2.10.0"),
+  ShadeRule.rename("*" -> "shaded2-@1").inLibrary("com.fasterxml.jackson.core" % "jackson-databind" % "2.10.0"),
+  ShadeRule.rename("mozilla.**" -> "shaded-mozilla.@1").inLibrary("com.amazonaws" % "aws-java-sdk-bundle" % "1.11.375"),
+)
+
 // Remove stub classes
 assemblyMergeStrategy in assembly := {
   case PathList("org", "apache", "spark", "unused", "UnusedStubClass.class") => MergeStrategy.discard
+  case x if x.contains("io.netty.versions.properties") => MergeStrategy.discard
   case x =>
     val oldStrategy = (assemblyMergeStrategy in assembly).value
     oldStrategy(x)
@@ -28,14 +38,3 @@ assemblyMergeStrategy in assembly := {
 
 // Exclude the Scala runtime jars
 assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false)
-
-resolvers ++= Seq(
-  "Spray Repository" at "http://repo.spray.cc/",
-  "Cloudera Repository" at "https://repository.cloudera.com/artifactory/cloudera-repos/",
-  "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
-  "Second Typesafe repo" at "http://repo.typesafe.com/typesafe/maven-releases/",
-  "Mesosphere Public Repository" at "http://downloads.mesosphere.io/maven",
-  Resolver.sonatypeRepo("public")
-)
-
-resolvers += Resolver.url("bintray-sbt-plugins", url("http://dl.bintray.com/sbt/sbt-plugin-releases"))(Resolver.ivyStylePatterns)

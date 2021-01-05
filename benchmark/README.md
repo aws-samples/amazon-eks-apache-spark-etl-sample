@@ -158,7 +158,7 @@ You can use service account `spark` in your driver pod.
 ### Generate the TCP-DS data
 
 ```shell
-kubectl apply -f examples/tpcds-data-generation.yaml
+kubectl apply -f examples/tpcds-data-generation-1tb.yaml
 ```
 
 ### Run TPC-DS queries
