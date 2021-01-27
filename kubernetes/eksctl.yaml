@@ -59,7 +59,7 @@ fargateProfiles:
       # label selectors will be scheduled onto Fargate:
       - namespace: spark-serverless
         labels:
-          spark-node: executor
+          emr-containers.amazonaws.com/component: executor
 
 managedNodeGroups:
   - name: tooling

@@ -1,8 +1,8 @@
 {
   "name": "nyTaxiAnalytics",
-  "virtualClusterId": "hmxje4otcjte18tj3i083phma",
-  "executionRoleArn": "arn:aws:iam::668876353122:role/gromav",
-  "releaseLabel": "emr-6.1.0-beta",
+  "virtualClusterId": "d3tgzq8tnp8i5gndcnn3euwe1",
+  "executionRoleArn": "arn:aws:iam::668876353122:role/spark",
+  "releaseLabel": "emr-6.2.0-latest",
   "jobDriver": {
     "sparkSubmitJobDriver": {
       "entryPoint": "s3://gromav-test/spark-eks-assembly-2.0.jar",
@@ -21,8 +21,8 @@
           "spark.dynamicAllocation.enabled":"true",
           "spark.executorEnv.AWS_REGION": "us-east-1",
           "spark.kubernetes.driverEnv.AWS_REGION": "us-east-1",
-          "spark.executor.memory": "20G",
-          "spark.driver.memory": "4G",
+          "spark.executor.memory": "27G",
+          "spark.driver.memory": "8G",
           "spark.executor.cores": "3",
           "spark.driver.node.selector": "lifecycle:od",
           "spark.executor.node.selector": "lifecycle:spot"
