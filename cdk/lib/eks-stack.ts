@@ -141,6 +141,9 @@ ${userData}
     //Attach policy to both spot and ondemand node groups
     ClusterAutoscalerIAMPolicy.attachToRole(asgSparkSpot.role);
     ClusterAutoscalerIAMPolicy.attachToRole(asgSparkOnDemand.role);
+    
+    const AutoscalerServiceAccount = eksCluster.addServiceAccount('Autoscaler',{name:'cluster-autoscaler',namespace:'kube-system'});
+    ClusterAutoscalerIAMPolicy.attachToRole(AutoscalerServiceAccount.role);
 
 
     //install cluster autoscaler manifest
