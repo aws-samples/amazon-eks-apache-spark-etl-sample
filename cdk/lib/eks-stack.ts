@@ -57,7 +57,7 @@ export class EksStack extends cdk.Stack {
       minCapacity: 0,
       desiredCapacity:0,
       maxCapacity: 4,
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE }, // specifying availabilityZones:[`${cdk.Stack.of(this).region}a`]  give CDK error
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE, availabilityZones:[`${cdk.Stack.of(this).region}a`] }, // specifying availabilityZones:[`${cdk.Stack.of(this).region}a`]  give CDK error
       bootstrapOptions: {
         kubeletExtraArgs: '--node-labels  arch=intel,os=linux,lifecycle=od,disk=nvme,noderole=spark,emr-containers.amazonaws.com/resource.type=job.run'
       }
@@ -76,7 +76,7 @@ export class EksStack extends cdk.Stack {
       minCapacity: 0,
       maxCapacity: 4,
       spotPrice: '0.28',
-      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE },
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE, availabilityZones:[`${cdk.Stack.of(this).region}b`] },
       bootstrapOptions: {
         kubeletExtraArgs: '--node-labels  arch=intel,os=linux,lifecycle=spot,disk=nvme,noderole=spark,emr-containers.amazonaws.com/resource.type=job.run'
       }
