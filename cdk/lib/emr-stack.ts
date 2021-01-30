@@ -14,6 +14,7 @@ export class EmrStack extends cdk.Stack {
     /*
     * CFN Config parameters: use cdk deploy --parameters <StackName>:<PARAMETER_NAME>=<PARAMETER_VALUE> to override default options
     */
+    /*
     const eksClusterName = new cdk.CfnParameter(this, "eksClusterName", {
       type: "String",
       minLength:5, 
@@ -21,17 +22,20 @@ export class EmrStack extends cdk.Stack {
       
   
     const eksCluster = eks.Cluster.fromClusterAttributes(this,'eksCluster',{clusterName:eksClusterName.valueAsString});
-    
-
+    */
+    const eksClusterName = cdk.Fn.importValue('EKSClusterName');
+    if (!eksClusterName){
+      throw "EKSClusterName is not defined, make sure you have EksStack correctly deployed"
+    }
     
     //create virtual clusters
     
     new emrcontainers.CfnVirtualCluster(this, 'EMRClusterEc2', {name:'spark-ec2',containerProvider:{
-      id:eksClusterName.valueAsString, type:'EKS', info:{eksInfo:{namespace:"default"}}
+      id:eksClusterName, type:'EKS', info:{eksInfo:{namespace:"default"}}
     }});
     
     new emrcontainers.CfnVirtualCluster(this, 'EMRClusterFargate', {name:'spark-fargate',containerProvider:{
-      id:eksClusterName.valueAsString, type:'EKS', info:{eksInfo:{namespace:"spark-serverless"}}
+      id:eksClusterName, type:'EKS', info:{eksInfo:{namespace:"spark-serverless"}}
     }});
     
   }

@@ -14,10 +14,15 @@ import {EmrStack} from '../lib/emr-stack';
 import {EmrStudioStack} from '../lib/emrstudio-stack';
 
 
-
+/*
+* Set CDK_DEFAULT_ACCOUNT and CDK_DEFAULT_REGION if you want to deploy to non-default region
+*/
+const appEnv = process.env.CDK_DEFAULT_ACCOUNT && process.env.CDK_DEFAULT_REGION ? {account: process.env.CDK_DEFAULT_ACCOUNT,region:process.env.CDK_DEFAULT_REGION} : {} ;
 const app = new cdk.App();
 
-const eksStack = new EksStack(app, 'EksStack');
-const emrStack = new EmrStack(app, 'EmrStack'); 
-const emrStudioStack = new EmrStudioStack(app,'EmrStudioStack');
+
+const eksStack = new EksStack(app, 'EksStack', {env : appEnv});
+const emrStack = new EmrStack(app, 'EmrStack',{env: appEnv}); 
+const emrStudioStack = new EmrStudioStack(app,'EmrStudioStack',{env:appEnv});
 emrStudioStack.addDependency(emrStack);
+emrStack.addDependency(eksStack);

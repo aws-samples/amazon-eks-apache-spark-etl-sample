@@ -19,11 +19,17 @@ export class EksStack extends cdk.Stack {
     /*
     * CFN Config parameters: use cdk deploy --parameters <StackName>:<PARAMETER_NAME>=<PARAMETER_VALUE> to override default options
     */
+    
+    /*
     const adminRoleArn = new cdk.CfnParameter(this, "adminRoleArn", {
       type: "String",
       allowedPattern:"^arn:aws:iam::[0-9]+:role/.+$",
       minLength:10, //arn:aws:iam::763234233692:role/AdminRole
       description: "The role Arn you use in the AWS console so you can see EKS cluster settings"});
+    */
+    
+    const adminRoleArn = this.node.tryGetContext('adminRoleArn');
+    if (!adminRoleArn) throw 'adminRoleArn is not found either pass it via --context parameter or add it to cdk.json';
     
     // create EKS cluster
     const eksCluster = new eks.Cluster(this, 'Cluster', {
@@ -34,7 +40,7 @@ export class EksStack extends cdk.Stack {
     
     
     // Add the role to Kubernetes auth configMap so you can manage the kubernetes cluster with this role
-    const clusterAdmin = iam.Role.fromRoleArn(this,'AdminRole',adminRoleArn.valueAsString);
+    const clusterAdmin = iam.Role.fromRoleArn(this,'AdminRole',adminRoleArn);
     eksCluster.awsAuth.addMastersRole(clusterAdmin,'AdminRole');
   
     // Add EKS-managed node group for running cert manager and ALB Ingress controller
@@ -188,9 +194,10 @@ ${userData}
       exportName:"EKSClusterName"
     });
     new cdk.CfnOutput(this,'EKSClusterKubectlRole',{
-      value: eksCluster.role.roleArn,
-      description: 'The cluster name for emrStack'
-    })
+      value: eksCluster.kubectlRole ? eksCluster.kubectlRole.roleArn : eksCluster.adminRole.roleArn ,
+      description: 'The cluster name for emrStack',
+      exportName:'EKSClusterKubectlRole'
+    }) 
   
   
 

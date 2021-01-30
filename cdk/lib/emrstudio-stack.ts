@@ -10,6 +10,8 @@ export class EmrStudioStack extends cdk.Stack {
      /*
     * CFN Config parameters: use cdk deploy --parameters <StackName>:<PARAMETER_NAME>=<PARAMETER_VALUE> to override default options
     */
+    
+    /*
     const eksClusterName = new cdk.CfnParameter(this, "eksClusterName", {
       type: "String",
       minLength:5, 
@@ -19,9 +21,22 @@ export class EmrStudioStack extends cdk.Stack {
       type: "String",
       minLength:5, 
       description: "your EKS cluster master roleArn"});
+    */
+
+    const eksClusterName = cdk.Fn.importValue('EKSClusterName');
+    if (!eksClusterName){
+      throw "EKSClusterName is not defined, make sure you have EksStack correctly deployed"
+    }
+    
+    const eksClusterMasterRoleArn = cdk.Fn.importValue('EKSClusterKubectlRole');
+    if (!eksClusterMasterRoleArn){
+      throw "EKSClusterKubectlRole is not defined, make sure you have EksStack correctly deployed"
+    }
+    
+    const eksCluster = eks.Cluster.fromClusterAttributes(this,'eksCluster',{clusterName:eksClusterName, kubectlRoleArn:eksClusterMasterRoleArn});
   
-    const eksCluster = eks.Cluster.fromClusterAttributes(this,'eksCluster',{clusterName:eksClusterName.valueAsString, kubectlRoleArn:eksClusterMasterRoleArn.valueAsString});
-        
+  
+  
     /* install ALB Ingress Controller by importing and running Kubernetes manifest file 
     *  cert-manager has to be installed prior to installing ALB and this is handled in EksStack
     */
