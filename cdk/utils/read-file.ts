@@ -4,7 +4,7 @@ import * as eks from '@aws-cdk/aws-eks';
 import {KubernetesManifest} from "@aws-cdk/aws-eks/lib/k8s-manifest";
 
 
-export function readYamlFromDir(dir: string, cluster: eks.Cluster) {
+export function readYamlFromDir(dir: string, cluster: eks.ICluster) {
   let previousResource: KubernetesManifest;
   fs.readdirSync(dir, "utf8").forEach(file => {
     if (file != undefined && file.split('.').pop() == 'yaml') {
