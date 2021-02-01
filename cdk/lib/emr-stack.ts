@@ -11,18 +11,7 @@ import {readYamlFromDir} from '../utils/read-file';
 export class EmrStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-    /*
-    * CFN Config parameters: use cdk deploy --parameters <StackName>:<PARAMETER_NAME>=<PARAMETER_VALUE> to override default options
-    */
-    /*
-    const eksClusterName = new cdk.CfnParameter(this, "eksClusterName", {
-      type: "String",
-      minLength:5, 
-      description: "your EKS cluster name"});
-      
-  
-    const eksCluster = eks.Cluster.fromClusterAttributes(this,'eksCluster',{clusterName:eksClusterName.valueAsString});
-    */
+
     const eksClusterName = cdk.Fn.importValue('EKSClusterName');
     if (!eksClusterName){
       throw "EKSClusterName is not defined, make sure you have EksStack correctly deployed"

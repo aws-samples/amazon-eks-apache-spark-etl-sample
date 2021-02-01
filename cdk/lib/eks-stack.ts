@@ -190,12 +190,12 @@ ${userData}
     });
     new cdk.CfnOutput(this, 'EKSClusterName', {
       value: eksCluster.clusterName,
-      description: 'The cluster name for emrStack',
+      description: 'Eks cluster name',
       exportName:"EKSClusterName"
     });
     new cdk.CfnOutput(this,'EKSClusterKubectlRole',{
       value: eksCluster.kubectlRole ? eksCluster.kubectlRole.roleArn : eksCluster.adminRole.roleArn ,
-      description: 'The cluster name for emrStack',
+      description: 'Kubectl IAM Role',
       exportName:'EKSClusterKubectlRole'
     }) 
   

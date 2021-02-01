@@ -10,18 +10,7 @@ export class EmrStudioStack extends cdk.Stack {
      /*
     * CFN Config parameters: use cdk deploy --parameters <StackName>:<PARAMETER_NAME>=<PARAMETER_VALUE> to override default options
     */
-    
-    /*
-    const eksClusterName = new cdk.CfnParameter(this, "eksClusterName", {
-      type: "String",
-      minLength:5, 
-      description: "your EKS cluster name"});
-      
-    const eksClusterMasterRoleArn = new cdk.CfnParameter(this, "eksClusterRoleArn", {
-      type: "String",
-      minLength:5, 
-      description: "your EKS cluster master roleArn"});
-    */
+
 
     const eksClusterName = cdk.Fn.importValue('EKSClusterName');
     if (!eksClusterName){
