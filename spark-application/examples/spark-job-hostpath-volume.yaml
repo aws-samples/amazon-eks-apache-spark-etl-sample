@@ -109,9 +109,9 @@ spec:
             --conf spark.kubernetes.driver.podTemplateFile='/opt/spark/conf/driver_pod_template.yml' \
             --conf spark.kubernetes.executor.podTemplateFile='/opt/spark/conf/executor_pod_template.yml' \
             --conf spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.mount.path='/pv/tmp' \
-            --conf spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.path=/pv-disks/local1 \
+            --conf spark.kubernetes.driver.volumes.hostPath.spark-local-dir-1.options.path=/pv-disks/local \
             --conf spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.mount.path='/pv/tmp' \
-            --conf spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.path=/pv-disks/local1 \
+            --conf spark.kubernetes.executor.volumes.hostPath.spark-local-dir-1.options.path=/pv-disks/local \
             --conf spark.local.dir='/pv/tmp' \
             --conf spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory \
             --conf spark.sql.sources.commitProtocolClass=org.apache.spark.internal.io.cloud.PathOutputCommitProtocol \

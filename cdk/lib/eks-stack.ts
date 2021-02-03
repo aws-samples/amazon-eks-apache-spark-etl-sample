@@ -27,7 +27,7 @@ export class EksStack extends cdk.Stack {
       minLength:10, //arn:aws:iam::763234233692:role/AdminRole
       description: "The role Arn you use in the AWS console so you can see EKS cluster settings"});
     */
-    
+
     const adminRoleArn = this.node.tryGetContext('adminRoleArn');
     if (!adminRoleArn) throw 'adminRoleArn is not found either pass it via --context parameter or add it to cdk.json';
     
@@ -49,7 +49,26 @@ export class EksStack extends cdk.Stack {
       minSize: 2,
       labels:{"lifecycle":"od","noderole":"tooling"}
     });
-    
+
+    const nvmeUserData = [
+      "#!/bin/bash",
+      "yum install nvme-cli -y",
+      "instance_stores=$(nvme list | awk '/Instance Storage/ {print $1}')",
+      "mkdir -p /pv-disks/local",
+      "count=$(echo $instance_stores | wc -w)",
+      "if [[ $count -eq 1 ]]; then",
+      "mkfs.ext4 $instance_stores",
+      "echo $instance_stores /pv-disks/local ext4 defaults,noatime 0 2 >> /etc/fstab",
+      "elif [[ $count -gt 1 ]]; then",
+      "mdadm --create --verbose --level=0 /dev/md0 --name=DATA --raid-devices=$count $instance_stores",
+      "mdadm --wait /dev/md0",
+      "mkfs.ext4 /dev/md0",
+      "mdadm --detail --scan >> /etc/mdadm.conf",
+      "echo /dev/md0 /pv-disks/local ext4 defaults,noatime 0 2 >> /etc/fstab",
+      "fi",
+      "mount -a"
+    ]
+
     //Add self-managed EC2 Autoscaling Node group for on-demand EMR jobs
     // @TODO - Figure out how to specify Availability zones as it seems to be a bug in CDK
     const asgSparkOnDemand = eksCluster.addAutoScalingGroupCapacity('sparkOnDemand', {
@@ -63,10 +82,7 @@ export class EksStack extends cdk.Stack {
       }
     });
     
-    asgSparkOnDemand.addUserData(
-      "IDX=1 && for DEV in /dev/disk/by-id/nvme-Amazon_EC2_NVMe_Instance_Storage_*-ns-1; do  mkfs.xfs ${DEV};mkdir -p /pv-disks/local${IDX};echo ${DEV} /pv-disks/local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done",
-      "mount -a"
-    );
+    asgSparkOnDemand.addUserData(nvmeUserData);
     
 
     
@@ -82,10 +98,7 @@ export class EksStack extends cdk.Stack {
       }
     });
     
-    asgSparkSpot.addUserData(
-      "IDX=1 && for DEV in /dev/disk/by-id/nvme-Amazon_EC2_NVMe_Instance_Storage_*-ns-1; do  mkfs.xfs ${DEV};mkdir -p /pv-disks/local${IDX};echo ${DEV} /pv-disks/local${IDX} xfs defaults,noatime 1 2 >> /etc/fstab; IDX=$((${IDX} + 1)); done",
-      "mount -a"
-    );
+    asgSparkSpot.addUserData(nvmeUserData);
     
     /*
     *. Uncomment the snippet below if you want to use managed node groups for spark instead of self-managed node groups
