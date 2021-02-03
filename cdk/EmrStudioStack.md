@@ -53,7 +53,7 @@ aws emr-containers create-managed-endpoint \
 It takes a few minutes to create a managed endpoint (the state should be ACTIVE) - you can check the status by running the command below and make sure you capture the list of subnets from the output as you will need them later. 
 
 ```bash
-aws emr-containers describe-managed-endpoint --endpoint-id <endpoint-id> --virtual-cluster-id <virtual-cluster-id> 
+aws emr-containers describe-managed-endpoint --id <endpoint-id> --virtual-cluster-id <virtual-cluster-id> 
 ```
 
 `Debug Tip:` If you see the status of your managed endpoint as TERMINATED_WITH_ERRORS use the following command to see the logs: 
@@ -64,18 +64,27 @@ kubectl logs -n kube-system deployment.apps/aws-load-balancer-controller
 
 4. **Log in to AWS SSO and create a user (or group) you will be using with EMR studio** [https://console.aws.amazon.com/singlesignon/home?region=us-east-1#/users]
 5. **Create EMR service role (emr-studio-service-role) and trust policy** [https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-service-role.html]
+
+If you have used CDK - then you can find the roleArn in **EmrStudioStack** Cloudformation stack outputs under the name **EmrStudioServiceRoleName** 
+
 6. **Create EMR Studio user role (emr-studio-user-session-role) and trust policy** 
 
     Use BasicSessionPolicy example 
 [https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-user-role.html]
 
+If you have used CDK - then you can find the roleArn in **EmrStudioStack** Cloudformation stack outputs under the name **EmrStudioUserRoleName** 
+
 7. **Create 2 EMR Studio security groups**
 
     Please create them exactly as they are shown [https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-studio-security-groups.html] (e.g. no inbound rules for workgroup security group) otherwise EMR Studio will throw the error.
+    
+If you have used CDK - then you can find the roleArn in **EksStack** Cloudformation stack outputs under the names **EKSClusterEmrStudioEngineSg**  and **EKSClusterEmrStudioWorkspaceSg**
 
 8. **Create emr-studio instance**
 
     Run the command below, use vpc-id of your EKS cluster and same subnets (space separated) that managed endpoint has been created in (step #3). Write down the access url of EMR studio.
+    
+    If you have used CDK - then you can find the relevant parameters in **EksStack** Cloudformation stack outputs (make sure you use Private VPC subnets)
 
 ```
 aws emr create-studio \ 
