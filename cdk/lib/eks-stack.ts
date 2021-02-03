@@ -6,12 +6,16 @@ import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 
 import {readYamlFromDir} from '../utils/read-file';
+
+
+
 /*
 * EMR adds a label emr-containers.amazonaws.com/resource.type=job.run to all the pods used to run for the jobs.
 * Another label emr-containers.amazonaws.com/component=controller is added for the three different types of pods we launch. 
 * Values can be executor|driver|controller. Use this to provide fine grained placement policy eg if user wants only executors on Fargate but rest on ec2.
 */
 export class EksStack extends cdk.Stack {
+
   
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -36,8 +40,7 @@ export class EksStack extends cdk.Stack {
       defaultCapacity: 0,  
       version: eks.KubernetesVersion.V1_18
     });
-    
-    
+
     
     // Add the role to Kubernetes auth configMap so you can manage the kubernetes cluster with this role
     const clusterAdmin = iam.Role.fromRoleArn(this,'AdminRole',adminRoleArn);
@@ -187,7 +190,7 @@ ${userData}
     
  
 
-    //Create IAM policy, role and Service Account for ALB Ingress 
+    //Create IAM policy, role and Service Account for ALB Ingress (needed for EMR Studio)
     const albPolicyDocument = iam.PolicyDocument.fromJson(JSON.parse(fs.readFileSync('./k8s/iam-policy.json', 'utf8')));
     const albIAMPolicy = new iam.Policy(this,'AWSLoadBalancerControllerIAMPolicy',{document:albPolicyDocument});
     const albServiceAccount = eksCluster.addServiceAccount('ALB',{name:'aws-load-balancer-controller',namespace:'kube-system'});
@@ -209,6 +212,16 @@ ${userData}
     const EmrWorkerIAMRole = new iam.Role(this,'EMRWorkerIAMRole',{assumedBy: new iam.FederatedPrincipal(eksCluster.openIdConnectProvider.openIdConnectProviderArn,[],'sts:AssumeRoleWithWebIdentity')});
     EmrWorkerIAMPolicy.attachToRole(EmrWorkerIAMRole);
   
+  
+    /*
+    * Setup EMRStudio Security Groups
+    */
+    const EmrStudioEngineSg = new ec2.SecurityGroup(this,'EmrStudioEngineSg',{vpc:eksCluster.vpc, allowAllOutbound:false});
+    EmrStudioEngineSg.addIngressRule(ec2.Peer.anyIpv4(),ec2.Port.tcp(18888),'Allow traffic from any resources in the Workspace security group for EMR Studio.');
+    const EmrStudioWorkspaceSg = new ec2.SecurityGroup(this,'EmrStudioWorkspaceSg',{vpc:eksCluster.vpc, allowAllOutbound:false});
+    EmrStudioWorkspaceSg.addEgressRule(ec2.Peer.anyIpv4(),ec2.Port.tcp(18888),'Allow traffic to any resources in the Engine security group for EMR Studio.');
+    EmrStudioWorkspaceSg.addEgressRule(ec2.Peer.anyIpv4(),ec2.Port.tcp(443),'Allow traffic to the internet to link Git repositories to Workspaces.');
+  
       // Output the value for EMRJobRole to be used when submitting your jobs
     
     new cdk.CfnOutput(this, 'EMRJobRoleArn', {
@@ -224,9 +237,30 @@ ${userData}
       value: eksCluster.kubectlRole ? eksCluster.kubectlRole.roleArn : eksCluster.adminRole.roleArn ,
       description: 'Kubectl IAM Role',
       exportName:'EKSClusterKubectlRole'
-    }) 
-  
-  
-
+    });
+    new cdk.CfnOutput(this,'EKSClusterPrivateSubnets',{
+      value: eksCluster.vpc.privateSubnets.map( function(itm:ec2.ISubnet) { return itm.subnetId}).join(" ") ,
+      description: 'Cluster private subnets',
+      exportName:'EKSClusterPrivateSubnets'
+    });
+    new cdk.CfnOutput(this,'EKSClusterPubicSubnets',{
+      value: eksCluster.vpc.publicSubnets.map( function(itm:ec2.ISubnet) { return itm.subnetId}).join(' ') ,
+      description: 'Cluster public subnets',
+      exportName:'EKSClusterPublicSubnets'
+    });
+    new cdk.CfnOutput(this,'EKSClusterVpcId',{
+      value: eksCluster.vpc.vpcId,
+      description: 'EksCluster VpcId',
+      exportName:'EKSClusterVpcId'
+    });
+    new cdk.CfnOutput(this,'EKSClusterEmrStudioWorkspaceSg',{
+      value: EmrStudioWorkspaceSg.securityGroupId,
+      description: 'EmrStudio Workspace Security Group'
+    });
+    new cdk.CfnOutput(this,'EKSClusterEmrStudioEngineSg',{
+      value: EmrStudioEngineSg.securityGroupId,
+      description: 'EmrStudio Engine Security Group'
+    });
+    
   }
 }

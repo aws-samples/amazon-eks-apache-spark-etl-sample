@@ -24,5 +24,3 @@ const app = new cdk.App();
 const eksStack = new EksStack(app, 'EksStack', {env : appEnv});
 const emrStack = new EmrStack(app, 'EmrStack',{env: appEnv}); 
 const emrStudioStack = new EmrStudioStack(app,'EmrStudioStack',{env:appEnv});
-emrStudioStack.addDependency(emrStack);
-emrStack.addDependency(eksStack);
