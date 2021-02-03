@@ -474,7 +474,7 @@ spec:
     spec:
       containers:
         - args:
-            - --cluster-name=Cluster9EE0221C-1eb448a8e25a4addb99e7806ba16e9d6
+            - --cluster-name={{EKSCLUSTER}}
             - --ingress-class=alb
           image: amazon/aws-alb-ingress-controller:v2.1.0
           livenessProbe:

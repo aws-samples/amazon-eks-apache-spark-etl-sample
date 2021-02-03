@@ -1,0 +1,73 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "elasticmapreduce:CreateEditor",
+                "elasticmapreduce:DescribeEditor",
+                "elasticmapreduce:ListEditors",
+                "elasticmapreduce:StartEditor",
+                "elasticmapreduce:StopEditor",
+                "elasticmapreduce:DeleteEditor",
+                "elasticmapreduce:OpenEditorInConsole",
+                "elasticmapreduce:AttachEditor",
+                "elasticmapreduce:DetachEditor",
+                "elasticmapreduce:CreateRepository",
+                "elasticmapreduce:DescribeRepository",
+                "elasticmapreduce:DeleteRepository",
+                "elasticmapreduce:ListRepositories",
+                "elasticmapreduce:LinkRepository",
+                "elasticmapreduce:UnlinkRepository",
+                "elasticmapreduce:DescribeCluster",
+                "elasticmapreduce:ListInstanceGroups",
+                "elasticmapreduce:ListBootstrapActions",
+                "elasticmapreduce:ListClusters",
+                "elasticmapreduce:ListSteps",
+                "elasticmapreduce:CreatePersistentAppUI",
+                "elasticmapreduce:DescribePersistentAppUI",
+                "elasticmapreduce:GetPersistentAppUIPresignedURL",
+                "secretsmanager:CreateSecret",
+                "secretsmanager:ListSecrets",
+                "emr-containers:DescribeVirtualCluster",
+                "emr-containers:ListVirtualClusters",
+                "emr-containers:DescribeManagedEndpoint",
+                "emr-containers:ListManagedEndpoints",
+                "emr-containers:CreateAccessTokenForManagedEndpoint",
+                "emr-containers:DescribeJobRun",
+                "emr-containers:ListJobRuns"
+            ],
+            "Resource": "*",
+            "Effect": "Allow",
+            "Sid": "AllowBasicActions"
+        },
+        {
+            "Action": "iam:PassRole",
+            "Resource": [
+                "{{EMRSTUDIO_SERVICE_ROLE}}"
+            ],
+            "Effect": "Allow",
+            "Sid": "PassRolePermission"
+        },
+        {
+            "Action": [
+                "s3:ListAllMyBuckets",
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+            ],
+            "Resource": "arn:aws:s3:::*",
+            "Effect": "Allow",
+            "Sid": "S3ListPermission"
+        },
+        {
+            "Action": [
+                "s3:GetObject"
+            ],
+            "Resource": [
+                "arn:aws:s3:::{{DEFAULT_S3_BUCKET_NAME}}/*",
+                "arn:aws:s3:::aws-logs-{{ACCOUNT_ID}}-{{REGION}}/elasticmapreduce/*"
+            ],
+            "Effect": "Allow",
+            "Sid": "S3GetObjectPermission"
+        }
+    ]
+}
