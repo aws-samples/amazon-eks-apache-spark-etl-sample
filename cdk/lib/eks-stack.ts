@@ -50,6 +50,7 @@ export class EksStack extends cdk.Stack {
       labels:{"lifecycle":"od","noderole":"tooling"}
     });
 
+
     //Add self-managed EC2 Autoscaling Node group for on-demand EMR jobs
     // @TODO - Figure out how to specify Availability zones as it seems to be a bug in CDK
     const asgSparkOnDemand = eksCluster.addAutoScalingGroupCapacity('sparkOnDemand', {
@@ -62,7 +63,7 @@ export class EksStack extends cdk.Stack {
         kubeletExtraArgs: '--node-labels  arch=intel,os=linux,lifecycle=od,disk=nvme,noderole=spark,emr-containers.amazonaws.com/resource.type=job.run'
       }
     });
-    
+
     asgSparkOnDemand.addUserData(
       "#!/bin/bash",
       "yum install nvme-cli -y",
@@ -81,9 +82,7 @@ export class EksStack extends cdk.Stack {
       "fi",
       "mount -a"
     );
-    
 
-    
     //Add self-managed EC2 Autoscaling Node group for spot EMR workloads
     const asgSparkSpot = eksCluster.addAutoScalingGroupCapacity('sparkSpot', {
       instanceType: new ec2.InstanceType('r5d.xlarge'),
@@ -95,7 +94,7 @@ export class EksStack extends cdk.Stack {
         kubeletExtraArgs: '--node-labels  arch=intel,os=linux,lifecycle=spot,disk=nvme,noderole=spark,emr-containers.amazonaws.com/resource.type=job.run'
       }
     });
-    
+
     asgSparkSpot.addUserData(
       "#!/bin/bash",
       "yum install nvme-cli -y",
