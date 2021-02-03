@@ -8,6 +8,6 @@
     "@aws-cdk/aws-secretsmanager:parseOwnedSecretName": true,
     "@aws-cdk/aws-kms:defaultKeyPolicies": true,
     "@aws-cdk/aws-s3:grantWriteWithoutAcl": true,
-    "adminRoleArn":"arn:aws:iam::763234233692:role/AdminRole"
+    "adminRoleArn":"arn:aws:iam::668876353122:role/gromav"
   }
 }
