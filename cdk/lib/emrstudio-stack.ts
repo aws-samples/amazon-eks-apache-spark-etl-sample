@@ -37,8 +37,8 @@ export class EmrStudioStack extends cdk.Stack {
     const caYaml = fs.readFileSync('./k8s/alb/alb.yaml', 'utf8');
     //replace {{EKSCLUSTER}} placeholder in yaml file with the actual cluster name
     const manifest = yaml.safeLoadAll(caYaml.replace('{{EKSCLUSTER}}',eksCluster.clusterName));
-    const kManifest = new eks.KubernetesManifest(this,'ClusterAlb',{cluster:eksCluster,manifest:manifest,overwrite:true}) 
-    //eksCluster.addManifest('ClusterALB',...manifest);xs
+    const kManifest = new eks.KubernetesManifest(this,'ClusterAlb124',{cluster:eksCluster,manifest:manifest}) 
+    //eksCluster.addManifest('eksClusterALB1',...manifest);
     
     
     /*
@@ -65,7 +65,6 @@ export class EmrStudioStack extends cdk.Stack {
     
     
     new cdk.CfnOutput(this,'EmrStudioUserSessionPolicyArn',{
-      //value: "arn:aws:iam::"+cdk.Stack.of(this).account+":policy/"+EmrStudioUserIAMPolicy.managedPolicyArn,
       value: EmrStudioUserIAMPolicy.managedPolicyArn,
       description: 'EmrStudio user session policy Arn'
     });
