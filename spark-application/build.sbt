@@ -9,14 +9,12 @@ mainClass in assembly := Some("ValueZones.Main")
 // additional librairies
 libraryDependencies ++= {
   Seq(
-    "org.apache.spark" %% "spark-core" % "3.0.0" % "provided",
-    "org.apache.spark" %% "spark-sql" % "3.0.0" % "provided",
-    "org.apache.hadoop" % "hadoop-aws" % "3.2.0",
-    "com.amazonaws" % "aws-java-sdk" % "1.11.375",
+    "org.apache.spark" %% "spark-core" % "3.0.1" % "provided",
+    "org.apache.spark" %% "spark-sql" % "3.0.1" % "provided",
+    "org.apache.spark" %% "spark-hive" % "3.0.1" % "provided",
     "org.scalactic" %% "scalactic" % "3.1.0",
     "org.scalatest" %% "scalatest" % "3.1.0" % Test
   )
-
 }
 
 assemblyShadeRules in assembly := Seq(
