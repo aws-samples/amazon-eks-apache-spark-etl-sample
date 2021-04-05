@@ -5,7 +5,6 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: spark
-  namespace: spark
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -18,22 +17,22 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: spark
-    namespace: spark
+    namespace: default
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
   name: spark-eks-pod-template
-  namespace: spark
 data:
   driver: |-
     apiVersion: v1
     kind: Pod
 
     spec:
+      serviceAccountName: spark
       nodeSelector:
-        node-lifecycle: on-demand
-        disk: nvme
+        lifecycle: od
+        disk: none
       initContainers:
       - name: volume-permissions
         image: public.ecr.aws/y4g4v0z7/busybox
@@ -47,20 +46,21 @@ data:
     kind: Pod
 
     spec:
+      serviceAccountName: spark
       tolerations:
-      - key: spot
-        operator: Equal
-        value: true
-        effect: NoSchedule
+      - key: "spot"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
       nodeSelector:
-        node-lifecycle: spot
+        lifecycle: spot
         disk: nvme
       affinity:
         podAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchExpressions:
-              - key: spark/app
+              - key: spark-app
                 operator: In
                 values:
                 - spark-eks
@@ -69,7 +69,7 @@ data:
           requiredDuringSchedulingIgnoredDuringExecution:
           - labelSelector:
               matchExpressions:
-              - key: spark/app
+              - key: spark-app
                 operator: NotIn
                 values:
                 - spark-eks
@@ -88,7 +88,6 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: spark-eks
-  namespace: spark
 spec:
   template:
     spec:
@@ -119,14 +118,13 @@ spec:
             --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
             --conf spark.kubernetes.container.image.pullPolicy=Always \
             --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark \
-            --conf spark.kubernetes.namespace=spark \
             --conf spark.kubernetes.driver.label.spark/app=spark-eks \
             --conf spark.kubernetes.executor.label.spark/app=spark-eks \
             --conf spark.kubernetes.driver.label.spark/component=driver \
-            --conf spark.kubernetes.executor.label.spark/component=executor \
+            --conf spark.kubernetes.executor.label.spark/component=executors \
             --conf spark.kubernetes.node.selector.noderole=spark \
-            --conf spark.kubernetes.node.selector.kubernetes.io/os=linux \
-            --conf spark.kubernetes.node.selector.arch=x86 \
+            --conf spark.kubernetes.node.selector.os=linux \
+            --conf spark.kubernetes.node.selector.arch=intel \
             --conf spark.kubernetes.driver.annotation.cluster-autoscaler.kubernetes.io/safe-to-evict=false \
             --conf spark.kubernetes.driver.podTemplateFile='/opt/spark/conf/driver_pod_template.yml' \
             --conf spark.kubernetes.executor.podTemplateFile='/opt/spark/conf/executor_pod_template.yml' \

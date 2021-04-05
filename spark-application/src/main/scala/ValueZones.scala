@@ -2,50 +2,62 @@ import org.apache.log4j.Logger
 import org.apache.log4j.Level
 import org.apache.spark.sql.{Dataset, Row, SparkSession}
 import org.apache.spark.sql.functions._
+import java.io.File
+
 
 object ValueZones {
 
-    val rideColumns = List(
-      "VendorID",
-      "pickup_datetime",
-      "dropoff_datetime",
-      "store_and_fwd_flag",
-      "RatecodeID",
-      "PULocationID",
-      "DOLocationID",
-      "passenger_count",
-      "trip_distance",
-      "fare_amount",
-      "extra",
-      "mta_tax",
-      "tip_amount",
-      "tolls_amount",
-      "improvement_surcharge",
-      "total_amount",
-      "payment_type"
-    )
+  val rideColumns = List(
+    "VendorID",
+    "pickup_datetime",
+    "dropoff_datetime",
+    "store_and_fwd_flag",
+    "RatecodeID",
+    "PULocationID",
+    "DOLocationID",
+    "passenger_count",
+    "trip_distance",
+    "fare_amount",
+    "extra",
+    "mta_tax",
+    "tip_amount",
+    "tolls_amount",
+    "improvement_surcharge",
+    "total_amount",
+    "payment_type"
+  )
 
   private val logger = Logger.getLogger(this.getClass)
+
+  val warehouseLocation = new File("spark-warehouse").getAbsolutePath
 
   lazy val session =
     SparkSession.builder
       .appName("nyctaxi-value-zones")
+      .config("spark.sql.warehouse.dir", warehouseLocation)
+      .enableHiveSupport()
       .getOrCreate()
 
   def main(args: Array[String]) {
 
     // check arguments
-    if (args.length != 4)
+    if (args.length != 5)
       throw new IllegalArgumentException(
         "Parameters : "+
-          "<targetBucket> "
+          "<tripDataBucket>"+
+          "<yearsToProcess>"+
+          "<zoneLookup>"+
+          "<targetBucket>"+
+          "<dbName>"
       )
     logger.setLevel(Level.INFO)
     try {
-      runJob(yellow = args(0).split(",").toList,
-        green = args(1).split(",").toList,
+
+      runJob(yellow=buildSourcePath(args(0), "yellow", args(1)),
+        green=buildSourcePath(args(0), "green", args(1)),
         zones = args(2),
-        target = args(3)
+        target = args(3),
+        dbName = args(4)
       )
       session.stop()
     } catch {
@@ -53,6 +65,12 @@ object ValueZones {
         logger.error(ex.getMessage)
         logger.error(ex.getStackTrace.toString)
     }
+  }
+
+  def buildSourcePath(rootBucket: String, color: String, years: String): List[String] = {
+    years.split(",")
+      .map(year => rootBucket+"/"+color+"_tripdata_"+year+"-*.csv")
+      .toList
   }
 
   def readGreen( green: String): Dataset[Row] = {
@@ -89,7 +107,7 @@ object ValueZones {
       .select("VendorID", rideColumns.filter(_!="VendorID"): _*)
   }
 
-  def runJob( yellow :List[String], green :List[String], zones :String, target :String) = {
+  def runJob( yellow :List[String], green :List[String], zones :String, target :String, dbName :String) = {
 
     logger.info("Execution started")
     import session.implicits._
@@ -125,6 +143,9 @@ object ValueZones {
       .withColumnRenamed("green_avg(minute_rate)","green_avg_minute_rate")
       .withColumnRenamed("green_count(minute_rate)","green_count")
 
+    session.sql("CREATE DATABASE IF NOT EXISTS `"+dbName+"`")
+    session.sql("use `"+dbName+"`")
+
     val rawQuery = allEventsWithZone
       .withColumn("year", year($"pickup_datetime"))
       .withColumn("month", month($"pickup_datetime"))
@@ -132,15 +153,19 @@ object ValueZones {
       .repartition($"year",$"month")
       .sortWithinPartitions("day")
       .write
+      .format("parquet")
       .mode("OVERWRITE")
       .partitionBy("year","month")
-      .parquet(target+"/raw-rides")
+      .option("path", target+ "/raw-rides")
+      .saveAsTable("raw_rides")
 
     val aggregateQuery = zoneAttractiveness
       .repartition(1)
       .sortWithinPartitions($"pickup_hour")
       .write
+      .format("parquet")
       .mode("OVERWRITE")
-      .parquet(target+"/value-rides")
+      .option("path", target+ "/value-rides")
+      .saveAsTable("value_rides")
   }
 }

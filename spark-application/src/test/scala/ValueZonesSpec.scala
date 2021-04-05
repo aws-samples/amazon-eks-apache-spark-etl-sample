@@ -15,7 +15,8 @@ class ValueZonesSpec extends FunSuite with BeforeAndAfterAll with SparkTestSessi
       List("src/test/resources/yellow_tripdata_sample.csv"),
       List("src/test/resources/green_tripdata_sample.csv"),
       "src/test/resources/taxi_zone_lookup.csv",
-      "src/test/resources/results/"
+      "src/test/resources/results/",
+      "testing_db"
     )
 
     val results = spark.read.parquet("src/test/resources/results/raw-rides")
