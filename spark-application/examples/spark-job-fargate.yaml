@@ -1,0 +1,111 @@
+# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: spark-serverless
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spark-serverless
+  namespace: spark-serverless
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: spark-serverless-role
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: edit
+subjects:
+  - kind: ServiceAccount
+    name: spark-serverless
+    namespace: spark-serverless
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: spark-eks
+  namespace: spark-serverless
+data:
+  driver: |-
+    apiVersion: v1
+    kind: Pod
+
+    spec:
+      nodeSelector:
+        node-lifecycle: on-demand
+        arch: x86
+        disk: none
+        noderole: spark
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spark-eks-serverless
+  namespace: spark-serverless
+spec:
+  template:
+    spec:
+      containers:
+        - name: spark
+          image: vgkowski/spark:v3.1.2
+          args: [
+            "/bin/sh",
+            "-c",
+            "/opt/spark/bin/spark-submit \
+            --master k8s://https://kubernetes.default.svc.cluster.local:443 \
+            --deploy-mode cluster \
+            --name spark-eks \
+            --class ValueZones \
+            --conf spark.jars.ivy=/tmp/.ivy \
+            --conf spark.dynamicAllocation.enabled=true \
+            --conf spark.dynamicAllocation.shuffleTracking.enabled=true \
+            --conf spark.dynamicAllocation.shuffleTracking.timeout=600 \
+            --conf spark.dynamicAllocation.minExecutors=10 \
+            --conf spark.dynamicAllocation.maxExecutors=40 \
+            --conf spark.kubernetes.allocation.batch.size=10 \
+            --conf spark.dynamicAllocation.executorAllocationRatio=1 \
+            --conf spark.dynamicAllocation.schedulerBacklogTimeout=1 \
+            --conf spark.driver.memory=4G \
+            --conf spark.executor.memory=16G \
+            --conf spark.executor.cores=2 \
+            --conf spark.sql.shuffle.partitions=40 \
+            --conf spark.kubernetes.container.image=vgkowski/spark-eks:v3.1.2 \
+            --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
+            --conf spark.kubernetes.container.image.pullPolicy=Always \
+            --conf spark.kubernetes.namespace=spark-serverless \
+            --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark-serverless \
+            --conf spark.kubernetes.driver.label.spark/app=spark-eks \
+            --conf spark.kubernetes.executor.label.spark/app=spark-eks \
+            --conf spark.kubernetes.driver.label.spark/component=driver \
+            --conf spark.kubernetes.executor.label.spark/component=executor \
+            --conf spark.kubernetes.driver.annotation.cluster-autoscaler.kubernetes.io/safe-to-evict=false \
+            --conf spark.kubernetes.driver.podTemplateFile='/opt/spark/conf/driver_pod_template.yml' \
+            --conf spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory \
+            --conf spark.sql.sources.commitProtocolClass=org.apache.spark.internal.io.cloud.PathOutputCommitProtocol \
+            --conf spark.sql.parquet.output.committer.class=org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter \
+            --conf spark.hadoop.fs.s3a.committer.name=magic \
+            --conf spark.hadoop.fs.s3a.committer.magic.enabled=true \
+            --conf spark.hadoop.fs.s3a.fast.upload=true \
+            local:///opt/spark/jars/spark-eks-assembly-3.1.2.jar \
+            \"s3a://nyc-tlc/trip data\" \
+            \"2017\" \
+            \"s3a://nyc-tlc/misc/taxi _zone_lookup.csv\" \
+            \"s3a://gromav-test/nyctaxi\"
+            \"spark_eks_serverless\""
+          ]
+          volumeMounts:
+            - name: spark-pod-template
+              mountPath: /opt/spark/conf/driver_pod_template.yml
+              subPath: driver
+      serviceAccountName: spark-serverless
+      restartPolicy: Never
+      volumes:
+        - name: spark-pod-template
+          configMap:
+            name: spark-eks
+            defaultMode: 420
+  backoffLimit: 4

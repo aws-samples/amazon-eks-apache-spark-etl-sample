@@ -1,0 +1,247 @@
+# Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: experiments
+  region: us-east-1
+  version: "1.19"
+
+availabilityZones: ["us-east-1a", "us-east-1b"]
+
+vpc:
+# If you wish to use an existing VPC, please provide the subnet ID, change the availability zones above accordingly
+#  subnets:
+#    private:
+#      us-east-1a: { id: <YOUR_SUBNET_ID> }
+#      us-east-1b: { id: <YOUR_SUBNET_ID> }
+  nat:
+    gateway: HighlyAvailable # other options: Disable, Single (default)
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+
+cloudWatch:
+  clusterLogging:
+    # enable specific types of cluster control plane logs
+    enableTypes: ["all"]
+    # all supported types: "api", "audit", "authenticator", "controllerManager", "scheduler"
+    # supported special values: "*" and "all"
+
+iam:
+  withOIDC: true
+  serviceAccounts:
+    - metadata:
+        name: cluster-autoscaler
+        namespace: kube-system
+        labels: {aws-usage: "cluster-ops"}
+      attachPolicy: # inline policy can be defined along with `attachPolicyARNs`
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "autoscaling:DescribeAutoScalingGroups"
+              - "autoscaling:DescribeAutoScalingInstances"
+              - "autoscaling:DescribeLaunchConfigurations"
+              - "autoscaling:DescribeTags"
+              - "autoscaling:SetDesiredCapacity"
+              - "autoscaling:TerminateInstanceInAutoScalingGroup"
+              - "ec2:DescribeLaunchTemplateVersions"
+            Resource: '*'
+
+fargateProfiles:
+  - name: spark-serverless
+    selectors:
+      # All workloads in the "spark-serverless" Kubernetes namespace matching the following
+      # label selectors will be scheduled onto Fargate:
+      - namespace: spark-serverless
+        # Only Spark executors (Pods with this label) will run on Fargate
+        labels:
+          spark/component: executor
+
+managedNodeGroups:
+  # Nodegroup used to support tools like Kubedashboard, Cluster Autoscaler...
+  - name: tooling
+    instanceType: t3.large
+    minSize: 0
+    maxSize: 2
+    desiredCapacity: 1
+    volumeSize: 20
+    labels:
+      noderole: tooling
+    tags:
+      k8s.io/cluster-autoscaler/node-template/label/noderole: tooling
+      k8s.io/cluster-autoscaler/experiments: owned
+      k8s.io/cluster-autoscaler/enabled: "true"
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+
+nodeGroups:
+  # Nodegroup used to run Spark driver on ARM based nodes with on-demand
+  - name: spark-arm-od-1b
+    availabilityZones: ["us-east-1b"]
+    minSize: 0
+    maxSize: 1
+    privateNetworking: true
+    instanceType: "m5.large"
+    labels:
+      arch: arm
+      disk: none
+      noderole: spark
+    tags:
+      k8s.io/cluster-autoscaler/node-template/label/arch: arm
+      k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os: linux
+      k8s.io/cluster-autoscaler/node-template/label/noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/disk: none
+      k8s.io/cluster-autoscaler/node-template/label/node-lifecycle: on-demand
+      k8s.io/cluster-autoscaler/experiments: owned
+      k8s.io/cluster-autoscaler/enabled: "true"
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+    preBootstrapCommands:
+      - "mkdir -p /pv-disks/local"
+
+  # Nodegroup used to run Spark executors on ARM based nodes with instance store for shuffle, spot and executors collocation
+  - name: spark-arm-spot-nvme-1b
+    availabilityZones: ["us-east-1b"]
+    minSize: 0
+    maxSize: 2
+    privateNetworking: true
+    instancesDistribution:
+      instanceTypes: ["r6gd.4xlarge"]
+      onDemandBaseCapacity: 0
+      onDemandPercentageAboveBaseCapacity: 0
+      spotAllocationStrategy: capacity-optimized
+    labels:
+      arch: arm
+      disk: nvme
+      noderole: spark
+    tags:
+      k8s.io/cluster-autoscaler/node-template/label/arch: arm
+      k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os: linux
+      k8s.io/cluster-autoscaler/node-template/label/noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/disk: nvme
+      k8s.io/cluster-autoscaler/node-template/label/node-lifecycle: spot
+      k8s.io/cluster-autoscaler/node-template/taint/spot: "true:NoSchedule"
+      k8s.io/cluster-autoscaler/experiments: owned
+      k8s.io/cluster-autoscaler/enabled: "true"
+    taints:
+      spot: "true:NoSchedule"
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+    preBootstrapCommands:
+      - "yum install nvme-cli mdadm -y"
+      - "mkdir -p /pv-disks/local"
+      - "instance_stores=$(nvme list | awk '/Instance Storage/ {print $1}') && count=$(echo $instance_stores | wc -w) && mdadm --create --verbose --level=0 /dev/md0 --name=DATA --raid-devices=$count $instance_stores"
+      - "mdadm --wait /dev/md0"
+      - "mkfs.ext4 /dev/md0"
+      - "mdadm --detail --scan >> /etc/mdadm.conf"
+      - "echo /dev/md0 /pv-disks/local ext4 defaults,noatime 0 2 >> /etc/fstab"
+      - "mount -a"
+
+  # Nodegroup used to run Spark driver on x86 based nodes with on-demand
+  - name: spark-od-1a
+    availabilityZones: ["us-east-1a"]
+    minSize: 0
+    maxSize: 1
+    privateNetworking: true
+    instanceType: "m5.large"
+    labels:
+      arch: x86
+      disk: none
+      noderole: spark
+    tags:
+      k8s.io/cluster-autoscaler/node-template/label/arch: x86
+      k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os: linux
+      k8s.io/cluster-autoscaler/node-template/label/noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/disk: none
+      k8s.io/cluster-autoscaler/node-template/label/node-lifecycle: on-demand
+      k8s.io/cluster-autoscaler/experiments: owned
+      k8s.io/cluster-autoscaler/enabled: "true"
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  # Nodegroup used to run Spark executors on x86 based nodes with instance store for shuffle, spot and executors collocation
+  - name: spark-spot-nvme-1a
+    availabilityZones: ["us-east-1a"]
+    minSize: 0
+    maxSize: 2
+    privateNetworking: true
+    instancesDistribution:
+      instanceTypes: ["r5d.4xlarge", "r5ad.4xlarge", "r5dn.4xlarge"]
+      onDemandBaseCapacity: 0
+      onDemandPercentageAboveBaseCapacity: 0
+      spotAllocationStrategy: capacity-optimized
+    labels:
+      arch: x86
+      disk: nvme
+      noderole: spark
+    tags:
+      k8s.io/cluster-autoscaler/node-template/label/arch: x86
+      k8s.io/cluster-autoscaler/node-template/label/kubernetes.io/os: linux
+      k8s.io/cluster-autoscaler/node-template/label/noderole: spark
+      k8s.io/cluster-autoscaler/node-template/label/disk: nvme
+      k8s.io/cluster-autoscaler/node-template/label/node-lifecycle: spot
+      k8s.io/cluster-autoscaler/node-template/taint/spot: "true:NoSchedule"
+      k8s.io/cluster-autoscaler/experiments: owned
+      k8s.io/cluster-autoscaler/enabled: "true"
+    taints:
+      spot: "true:NoSchedule"
+    iam:
+      withAddonPolicies:
+        ebs: true
+        fsx: true
+        efs: true
+        autoScaler: true
+        cloudWatch: true
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+    preBootstrapCommands:
+      - "yum install nvme-cli mdadm -y"
+      - "mkdir -p /pv-disks/local"
+      - "instance_stores=$(nvme list | awk '/Instance Storage/ {print $1}') && count=$(echo $instance_stores | wc -w) && mdadm --create --verbose --level=0 /dev/md0 --name=DATA --raid-devices=$count $instance_stores"
+      - "mdadm --wait /dev/md0"
+      - "mkfs.ext4 /dev/md0"
+      - "mdadm --detail --scan >> /etc/mdadm.conf"
+      - "echo /dev/md0 /pv-disks/local ext4 defaults,noatime 0 2 >> /etc/fstab"
+      - "mount -a"
