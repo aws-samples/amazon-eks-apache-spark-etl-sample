@@ -3,32 +3,32 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: spark-serverless
+  name: spark-fargate
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: spark-serverless
-  namespace: spark-serverless
+  name: spark-fargate
+  namespace: spark-fargate
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: spark-serverless-role
+  name: spark-fargate-role
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: edit
 subjects:
   - kind: ServiceAccount
-    name: spark-serverless
-    namespace: spark-serverless
+    name: spark-fargate
+    namespace: spark-fargate
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: spark-eks
-  namespace: spark-serverless
+  name: spark-eks-fargate
+  namespace: spark-fargate
 data:
   driver: |-
     apiVersion: v1
@@ -44,8 +44,8 @@ data:
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: spark-eks-serverless
-  namespace: spark-serverless
+  name: spark-eks-fargate
+  namespace: spark-fargate
 spec:
   template:
     spec:
@@ -58,14 +58,14 @@ spec:
             "/opt/spark/bin/spark-submit \
             --master k8s://https://kubernetes.default.svc.cluster.local:443 \
             --deploy-mode cluster \
-            --name spark-eks \
+            --name spark-eks-fargate \
             --class ValueZones \
             --conf spark.jars.ivy=/tmp/.ivy \
             --conf spark.dynamicAllocation.enabled=true \
             --conf spark.dynamicAllocation.shuffleTracking.enabled=true \
             --conf spark.dynamicAllocation.shuffleTracking.timeout=600 \
-            --conf spark.dynamicAllocation.minExecutors=10 \
-            --conf spark.dynamicAllocation.maxExecutors=40 \
+            --conf spark.dynamicAllocation.minExecutors=4 \
+            --conf spark.dynamicAllocation.maxExecutors=12 \
             --conf spark.kubernetes.allocation.batch.size=10 \
             --conf spark.dynamicAllocation.executorAllocationRatio=1 \
             --conf spark.dynamicAllocation.schedulerBacklogTimeout=1 \
@@ -76,10 +76,10 @@ spec:
             --conf spark.kubernetes.container.image=vgkowski/spark-eks:v3.1.2 \
             --conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
             --conf spark.kubernetes.container.image.pullPolicy=Always \
-            --conf spark.kubernetes.namespace=spark-serverless \
-            --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark-serverless \
-            --conf spark.kubernetes.driver.label.spark/app=spark-eks \
-            --conf spark.kubernetes.executor.label.spark/app=spark-eks \
+            --conf spark.kubernetes.namespace=spark-fargate \
+            --conf spark.kubernetes.authenticate.driver.serviceAccountName=spark-fargate \
+            --conf spark.kubernetes.driver.label.spark/app=spark-eks-fargate \
+            --conf spark.kubernetes.executor.label.spark/app=spark-eks-fargate \
             --conf spark.kubernetes.driver.label.spark/component=driver \
             --conf spark.kubernetes.executor.label.spark/component=executor \
             --conf spark.kubernetes.driver.annotation.cluster-autoscaler.kubernetes.io/safe-to-evict=false \
@@ -87,6 +87,9 @@ spec:
             --conf spark.hadoop.mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory \
             --conf spark.sql.sources.commitProtocolClass=org.apache.spark.internal.io.cloud.PathOutputCommitProtocol \
             --conf spark.sql.parquet.output.committer.class=org.apache.hadoop.mapreduce.lib.output.BindingPathOutputCommitter \
+            --conf spark.hadoop.fs.s3a.aws.credentials.provider=com.amazonaws.auth.WebIdentityTokenCredentialsProvider \
+            --conf spark.kubernetes.authenticate.submission.caCertFile=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+            --conf spark.kubernetes.authenticate.submission.oauthTokenFile=/var/run/secrets/kubernetes.io/serviceaccount/token \
             --conf spark.hadoop.fs.s3a.committer.name=magic \
             --conf spark.hadoop.fs.s3a.committer.magic.enabled=true \
             --conf spark.hadoop.fs.s3a.fast.upload=true \
@@ -95,17 +98,17 @@ spec:
             \"2017\" \
             \"s3a://nyc-tlc/misc/taxi _zone_lookup.csv\" \
             \"s3a://gromav-test/nyctaxi\"
-            \"spark_eks_serverless\""
+            \"spark_eks_fargate\""
           ]
           volumeMounts:
             - name: spark-pod-template
               mountPath: /opt/spark/conf/driver_pod_template.yml
               subPath: driver
-      serviceAccountName: spark-serverless
+      serviceAccountName: spark-fargate
       restartPolicy: Never
       volumes:
         - name: spark-pod-template
           configMap:
-            name: spark-eks
+            name: spark-eks-fargate
             defaultMode: 420
   backoffLimit: 4
