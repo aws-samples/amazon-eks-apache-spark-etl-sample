@@ -89,7 +89,7 @@ spec:
             --conf spark.hadoop.fs.s3a.committer.magic.enabled=true \
             --conf spark.hadoop.fs.s3a.fast.upload=true \
             local:///opt/spark/jars/spark-eks-assembly-3.1.2.jar \
-            \"s3a://nyc-tlc/trip data\" \
+            \"s3a://nyc-tlc/csv_backup\" \
             \"2017\" \
             \"s3a://nyc-tlc/misc/taxi _zone_lookup.csv\" \
             \"s3a://gromav-test/nyctaxi\"

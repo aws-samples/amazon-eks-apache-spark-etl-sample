@@ -7,3 +7,4 @@ TODO
 
 /.idea/
 /benchmark/
+/spark-application/.bsp/

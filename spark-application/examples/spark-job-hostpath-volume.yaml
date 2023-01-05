@@ -134,7 +134,7 @@ spec:
             --conf spark.kubernetes.authenticate.submission.caCertFile=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
             --conf spark.kubernetes.authenticate.submission.oauthTokenFile=/var/run/secrets/kubernetes.io/serviceaccount/token \
             local:///opt/spark/jars/spark-eks-assembly-3.1.2.jar \
-            \"s3a://nyc-tlc/trip data\" \
+            \"s3a://nyc-tlc/csv_backup\" \
             \"2017\" \
             \"s3a://nyc-tlc/misc/taxi _zone_lookup.csv\" \
             \"s3a://<RESULTS_BUCKET>/nyctaxi\"
